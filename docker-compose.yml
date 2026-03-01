@@ -1,0 +1,30 @@
+services:
+  # LLM Mock APIs Sandbox Server (https://github.com/sanketskakad/llm-mock-apis)
+  # Provides zero-key mock endpoints for flights, hotels, activities, and bookings with web dashboard
+  llm-mock-apis:
+    image: sanketkakad/llm-api-playground:latest
+    container_name: llm-mock-apis
+    ports:
+      - "${MOCK_API_PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  # Multi-Agent Travel Booking Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: multi-agents-travel-booking-app
+    environment:
+      - MOCK_API_BASE_URL=http://llm-mock-apis:3000
+    depends_on:
+      llm-mock-apis:
+        condition: service_healthy
+    restart: unless-stopped
