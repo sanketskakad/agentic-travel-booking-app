@@ -1,6 +1,6 @@
 # ✈️ Multi-Agent Travel Booking App
 
-An AI-powered multi-agent travel booking system leveraging local zero-key LLM mock APIs for flights, hotels, activities, and reservations.
+An AI-powered multi-agent travel booking system using local zero-key LLM mock APIs for flights, hotels, activities, and reservations.
 
 ---
 
@@ -83,77 +83,6 @@ MOCK_API_BASE_URL=http://localhost:3001 uv run main.py
 
 ---
 
-## 🚀 Deployment Strategy (Hugging Face Spaces)
-
-This section explains how to deploy a unified React frontend and FastAPI/LangGraph backend to Hugging Face Spaces using the Docker SDK.
-
-### The Single-Port Constraint
-Hugging Face Spaces exposes only a single public port (by default, port `7860`). Therefore, to run a separate React frontend and a FastAPI backend together, the recommended deployment pattern is:
-1. **Multi-Stage Build**: Compile the React frontend into static assets (HTML/CSS/JS).
-2. **Serve from Backend**: Mount and serve the compiled static assets directly via FastAPI using `StaticFiles`.
-3. **API Prefixing**: Expose the backend endpoints under a prefixed path (e.g. `/api/...`).
-
-### Dockerfile Setup for Hugging Face Spaces
-Create or update your `Dockerfile` at the root of the project to build both applications:
-
-```dockerfile
-# --- Stage 1: Build React Frontend ---
-FROM node:20 AS frontend-builder
-WORKDIR /frontend
-COPY frontend/package*.json ./
-RUN npm install
-COPY frontend/ ./
-RUN npm run build
-
-# --- Stage 2: Python Backend & Execution ---
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-WORKDIR /app
-
-# Install Python dependencies
-COPY backend/pyproject.toml backend/uv.lock ./
-RUN uv sync --frozen --no-install-project
-
-# Copy backend code
-COPY backend/ ./
-
-# Copy React build files from Stage 1 into the backend's static directory
-COPY --from=frontend-builder /frontend/dist ./static
-
-# Expose Hugging Face's default port
-EXPOSE 7860
-ENV PORT=7860
-
-# Run the FastAPI server
-CMD ["uv", "run", "main.py"]
-```
-
-### FastAPI Config for Static Serving
-To serve the static React assets from FastAPI, update your `main.py`:
-
-```python
-import os
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-
-app = FastAPI()
-
-# 1. API Route Example
-@app.post("/api/travelplan")
-def get_travel_plan(request: QueryRequest):
-    return {"response": "Travel plan generated successfully."}
-
-# 2. Serve React static asset files
-app.mount("/assets", StaticFiles(directory="static/assets"), name="static")
-
-# 3. Catch-all route to serve index.html (supports React Router client-side navigation)
-@app.get("/{catchall:path}")
-def serve_frontend(catchall: str):
-    return FileResponse("static/index.html")
-```
-
----
-
 ## 🧑‍🏫 Step-by-Step Setup Guide (For Students)
 
 This guide walks you through the step-by-step setup of this project, explaining package management, Docker setup, and FastAPI CORS configuration.
@@ -169,11 +98,11 @@ This automatically generates:
 2. `main.py`: A simple hello-world script.
 3. `.python-version`: A file specifying the local Python runtime version.
 
-### Step 2: Docker Containerization Setup
-To ensure the backend runs identically in development and production environments, we containerize it alongside our mock travel API server.
+### Step 2: Docker Setup
+To ensure the backend runs identically in development and production environments, we package it inside a container alongside our mock travel API server.
 
 #### 1. The `Dockerfile`
-The `Dockerfile` instructs Docker how to package the FastAPI application using the slim Python runtime and the `uv` package installer.
+The `Dockerfile` tells Docker how to package the FastAPI application using the slim Python runtime and the `uv` package installer.
 ```dockerfile
 # Use the official lightweight uv image with python 3.12/3.14
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
@@ -202,7 +131,7 @@ CMD ["uv", "run", "main.py"]
 ```
 
 #### 2. Multi-Container Orchestration (`docker-compose.yml`)
-The `docker-compose.yml` orchestrates two containers:
+The `docker-compose.yml` configures two containers:
 1. `llm-mock-apis`: The sandbox API server that simulates flights, hotels, and activities.
 2. `app`: Our Python FastAPI backend application.
 ```yaml
@@ -289,4 +218,75 @@ if __name__ == "__main__":
     # Use PORT environment variable if available (e.g. inside Docker), fallback to 8000
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+```
+
+---
+
+## 🚀 Deployment Strategy (Hugging Face Spaces)
+
+This section explains how to deploy a unified React frontend and FastAPI/LangGraph backend to Hugging Face Spaces using the Docker SDK.
+
+### The Single-Port Constraint
+Hugging Face Spaces exposes only a single public port (by default, port `7860`). Therefore, to run a separate React frontend and a FastAPI backend together, the recommended deployment pattern is:
+1. **Multi-Stage Build**: Compile the React frontend into static assets (HTML/CSS/JS).
+2. **Serve from Backend**: Mount and serve the compiled static assets directly via FastAPI using `StaticFiles`.
+3. **API Prefixing**: Expose the backend endpoints under a prefixed path (e.g. `/api/...`).
+
+### Dockerfile Setup for Hugging Face Spaces
+Create or update your `Dockerfile` at the root of the project to build both applications:
+
+```dockerfile
+# --- Stage 1: Build React Frontend ---
+FROM node:20 AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# --- Stage 2: Python Backend & Execution ---
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+WORKDIR /app
+
+# Install Python dependencies
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN uv sync --frozen --no-install-project
+
+# Copy backend code
+COPY backend/ ./
+
+# Copy React build files from Stage 1 into the backend's static directory
+COPY --from=frontend-builder /frontend/dist ./static
+
+# Expose Hugging Face's default port
+EXPOSE 7860
+ENV PORT=7860
+
+# Run the FastAPI server
+CMD ["uv", "run", "main.py"]
+```
+
+### FastAPI Config for Static Serving
+To serve the static React assets from FastAPI, update your `main.py`:
+
+```python
+import os
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+app = FastAPI()
+
+# 1. API Route Example
+@app.post("/api/travelplan")
+def get_travel_plan(request: QueryRequest):
+    return {"response": "Travel plan generated successfully."}
+
+# 2. Serve React static asset files
+app.mount("/assets", StaticFiles(directory="static/assets"), name="static")
+
+# 3. Catch-all route to serve index.html (supports React Router client-side navigation)
+@app.get("/{catchall:path}")
+def serve_frontend(catchall: str):
+    return FileResponse("static/index.html")
 ```

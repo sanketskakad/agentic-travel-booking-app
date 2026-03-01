@@ -1,12 +1,34 @@
-.venv
-__pycache__
+# Git configuration
+.git
+.gitignore
+.dockerignore
+
+# Dependencies and build folders
+node_modules/
+dist/
+build/
+
+# Python Virtual Environments & Caches
+.venv/
+venv/
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
-.git
-.gitignore
-.pytest_cache
+.pytest_cache/
 .coverage
-htmlcov
+htmlcov/
+
+# Local Environment Variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# IDEs and local files
+.vscode/
+.idea/
 .DS_Store
+Thumbs.db
