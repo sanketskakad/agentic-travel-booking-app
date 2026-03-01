@@ -83,6 +83,77 @@ MOCK_API_BASE_URL=http://localhost:3001 uv run main.py
 
 ---
 
+## 🚀 Deployment Strategy (Hugging Face Spaces)
+
+This section explains how to deploy a unified React frontend and FastAPI/LangGraph backend to Hugging Face Spaces using the Docker SDK.
+
+### The Single-Port Constraint
+Hugging Face Spaces exposes only a single public port (by default, port `7860`). Therefore, to run a separate React frontend and a FastAPI backend together, the recommended deployment pattern is:
+1. **Multi-Stage Build**: Compile the React frontend into static assets (HTML/CSS/JS).
+2. **Serve from Backend**: Mount and serve the compiled static assets directly via FastAPI using `StaticFiles`.
+3. **API Prefixing**: Expose the backend endpoints under a prefixed path (e.g. `/api/...`).
+
+### Dockerfile Setup for Hugging Face Spaces
+Create or update your `Dockerfile` at the root of the project to build both applications:
+
+```dockerfile
+# --- Stage 1: Build React Frontend ---
+FROM node:20 AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# --- Stage 2: Python Backend & Execution ---
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+WORKDIR /app
+
+# Install Python dependencies
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN uv sync --frozen --no-install-project
+
+# Copy backend code
+COPY backend/ ./
+
+# Copy React build files from Stage 1 into the backend's static directory
+COPY --from=frontend-builder /frontend/dist ./static
+
+# Expose Hugging Face's default port
+EXPOSE 7860
+ENV PORT=7860
+
+# Run the FastAPI server
+CMD ["uv", "run", "main.py"]
+```
+
+### FastAPI Config for Static Serving
+To serve the static React assets from FastAPI, update your `main.py`:
+
+```python
+import os
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+app = FastAPI()
+
+# 1. API Route Example
+@app.post("/api/travelplan")
+def get_travel_plan(request: QueryRequest):
+    return {"response": "Travel plan generated successfully."}
+
+# 2. Serve React static asset files
+app.mount("/assets", StaticFiles(directory="static/assets"), name="static")
+
+# 3. Catch-all route to serve index.html (supports React Router client-side navigation)
+@app.get("/{catchall:path}")
+def serve_frontend(catchall: str):
+    return FileResponse("static/index.html")
+```
+
+---
+
 ## 🧑‍🏫 Step-by-Step Setup Guide (For Students)
 
 This guide walks you through the step-by-step setup of this project, explaining package management, Docker setup, and FastAPI CORS configuration.
