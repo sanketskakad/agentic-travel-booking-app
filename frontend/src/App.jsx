@@ -270,6 +270,12 @@ function App() {
 
   const activeChat = conversations.find(c => c.id === activeId) || conversations[0];
 
+  useEffect(() => {
+    if (activeChat && activeChat.id !== activeId) {
+      setActiveId(activeChat.id);
+    }
+  }, [activeChat, activeId]);
+
   /* ── Handlers ───────────────────────────────────────────────────────── */
   const send = async (text) => {
     const msg = (text || input).trim();
@@ -314,7 +320,7 @@ function App() {
       };
 
       const currentChat = conversations.find(c => c.id === activeId);
-      const msgIndex = currentChat ? currentChat.messages.length : 0;
+      const msgIndex = currentChat ? currentChat.messages.length + 1 : 1;
 
       // Calculate duration in nights between dates
       let initialNights = 1;
@@ -1464,28 +1470,28 @@ function App() {
                               </div>
                               
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
-                                {selections[i].flight && (
+                                {selections[i]?.flight && (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingBottom: 6, borderBottom: `1px solid ${border}` }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', color: text, fontWeight: 600 }}>
-                                      <span>✈️ Outbound Flight: {selections[i].flight.name}</span>
-                                      <span>€{(selections[i].flight.price / 100).toFixed(2)}</span>
+                                      <span>✈️ Outbound Flight: {selections[i]?.flight?.name}</span>
+                                      <span>€{(selections[i]?.flight?.price / 100).toFixed(2)}</span>
                                     </div>
-                                    <span style={{ fontSize: 11, color: sub }}>Departure: {currentDepartureDate} • {selections[i].flight.origin} to {selections[i].flight.destination}</span>
+                                    <span style={{ fontSize: 11, color: sub }}>Departure: {currentDepartureDate} • {selections[i]?.flight?.origin} to {selections[i]?.flight?.destination}</span>
                                   </div>
                                 )}
-                                {selections[i].hotel && (
+                                {selections[i]?.hotel && (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingBottom: 6, borderBottom: `1px solid ${border}` }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', color: text, fontWeight: 600 }}>
-                                      <span>🏨 Accommodation: {selections[i].hotel.name}</span>
-                                      <span>€{((selections[i].hotel.price * currentNights) / 100).toFixed(2)}</span>
+                                      <span>🏨 Accommodation: {selections[i]?.hotel?.name}</span>
+                                      <span>€{((selections[i]?.hotel?.price * currentNights) / 100).toFixed(2)}</span>
                                     </div>
-                                    <span style={{ fontSize: 11, color: sub }}>Check-in: {currentCheckInDate} • Duration: {currentNights} nights (€{(selections[i].hotel.price / 100).toFixed(2)} / night)</span>
+                                    <span style={{ fontSize: 11, color: sub }}>Check-in: {currentCheckInDate} • Duration: {currentNights} nights (€{(selections[i]?.hotel?.price / 100).toFixed(2)} / night)</span>
                                   </div>
                                 )}
-                                {selections[i].activities && selections[i].activities.length > 0 && (
+                                {selections[i]?.activities && selections[i]?.activities?.length > 0 && (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 6, borderBottom: `1px solid ${border}` }}>
                                     <span style={{ color: text, fontWeight: 600 }}>🎟️ Selected Attractions:</span>
-                                    {selections[i].activities.map((act, actIdx) => (
+                                    {selections[i]?.activities?.map((act, actIdx) => (
                                       <div key={actIdx} style={{ display: 'flex', justifyContent: 'space-between', color: sub, paddingLeft: 8 }}>
                                         <span>• {act.name}</span>
                                         <span style={{ fontWeight: 600, color: text }}>€{(act.price / 100).toFixed(2)}</span>
@@ -1493,23 +1499,23 @@ function App() {
                                     ))}
                                   </div>
                                 )}
-                                {selections[i].returnFlight && (
+                                {selections[i]?.returnFlight && (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingBottom: 6, borderBottom: `1px solid ${border}` }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', color: text, fontWeight: 600 }}>
-                                      <span>✈️ Return Flight: {selections[i].returnFlight.name}</span>
-                                      <span>€{(selections[i].returnFlight.price / 100).toFixed(2)}</span>
+                                      <span>✈️ Return Flight: {selections[i]?.returnFlight?.name}</span>
+                                      <span>€{(selections[i]?.returnFlight?.price / 100).toFixed(2)}</span>
                                     </div>
-                                    <span style={{ fontSize: 11, color: sub }}>Departure: {currentReturnDate} • {selections[i].returnFlight.origin} to {selections[i].returnFlight.destination}</span>
+                                    <span style={{ fontSize: 11, color: sub }}>Departure: {currentReturnDate} • {selections[i]?.returnFlight?.origin} to {selections[i]?.returnFlight?.destination}</span>
                                   </div>
                                 )}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 14 }}>
                                   <span>Total Itinerary Price</span>
                                   <span style={{ color: A.blue }}>
                                     €{(
-                                      ((selections[i].flight?.price || 0) + 
-                                       (selections[i].returnFlight?.price || 0) + 
-                                       ((selections[i].hotel?.price || 0) * currentNights) + 
-                                       (selections[i].activities || []).reduce((sum, act) => sum + act.price, 0)) / 100
+                                      ((selections[i]?.flight?.price || 0) + 
+                                       (selections[i]?.returnFlight?.price || 0) + 
+                                       ((selections[i]?.hotel?.price || 0) * currentNights) + 
+                                       (selections[i]?.activities || []).reduce((sum, act) => sum + act.price, 0)) / 100
                                     ).toFixed(2)}
                                   </span>
                                 </div>
