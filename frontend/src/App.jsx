@@ -5,7 +5,7 @@ import {
   Globe, Menu, X, Check, Calendar, User, ArrowRight
 } from 'lucide-react';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin;
 
 /* ── Exact design system tokens ──────────────────────────────────────────── */
 const A = {
