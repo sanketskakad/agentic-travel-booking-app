@@ -433,7 +433,7 @@ function App() {
   };
 
   const handleGroupBook = async (i) => {
-    const guestName = (bookingNames[i] || '').trim();
+    const guestName = (bookingNames?.[i] || '').trim();
     if (!guestName) {
       alert("Please enter a guest name before confirming booking.");
       return;
@@ -812,7 +812,7 @@ function App() {
                 const isUser = msg.role === 'user';
                 const parsed = !isUser ? parseTravelResponse(msg) : null;
                 const originallyHasResults = parsed && (parsed.flights.length > 0 || parsed.returnFlights.length > 0 || parsed.hotels.length > 0 || parsed.activities.length > 0);
-                const isBooked = !!bookedMessages[i];
+                const isBooked = !!bookedMessages?.[i];
                 const hasResults = originallyHasResults && !isBooked;
 
                 return (
@@ -861,7 +861,7 @@ function App() {
 
                     {/* Interactive Options Section */}
                     {hasResults && (() => {
-                      const currentStep = bookingSteps[i] || 1;
+                      const currentStep = bookingSteps?.[i] || 1;
                       
                       const depDateDefault = msg.departureDate || '';
                       const retDateDefault = msg.returnDate || '';
@@ -1528,7 +1528,7 @@ function App() {
                                   <input
                                     required
                                     type="text"
-                                    value={bookingNames[i] || ''}
+                                    value={bookingNames?.[i] || ''}
                                     onChange={e => setBookingNames(prev => ({ ...prev, [i]: e.target.value }))}
                                     placeholder="e.g. John Doe"
                                     style={{
@@ -1538,15 +1538,15 @@ function App() {
                                   />
                                   <button
                                     onClick={() => handleGroupBook(i)}
-                                    disabled={loading || !(bookingNames[i] || '').trim()}
+                                    disabled={loading || !(bookingNames?.[i] || '').trim()}
                                     style={{
                                       background: A.blue, color: '#fff', border: 'none', borderRadius: 12,
                                       padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                                      opacity: !(bookingNames[i] || '').trim() ? 0.6 : 1, transition: 'all 0.2s',
+                                      opacity: !(bookingNames?.[i] || '').trim() ? 0.6 : 1, transition: 'all 0.2s',
                                       whiteSpace: 'nowrap'
                                     }}
-                                    onMouseEnter={e => { if (!loading && (bookingNames[i] || '').trim()) e.currentTarget.style.background = A.blueHover; }}
-                                    onMouseLeave={e => { if (!loading && (bookingNames[i] || '').trim()) e.currentTarget.style.background = A.blue; }}
+                                    onMouseEnter={e => { if (!loading && (bookingNames?.[i] || '').trim()) e.currentTarget.style.background = A.blueHover; }}
+                                    onMouseLeave={e => { if (!loading && (bookingNames?.[i] || '').trim()) e.currentTarget.style.background = A.blue; }}
                                   >
                                     Book Selected Trip
                                   </button>
