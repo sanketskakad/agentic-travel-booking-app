@@ -1,10 +1,15 @@
 import logging
 import requests
-from app.config.settings import MOCK_API_BASE_URL
+from app.config.settings import MOCK_API_BASE_URL, USE_LOCAL_MOCK
 
 logger = logging.getLogger("travel_client")
 
 def get_available_flights(origin: str, destination: str) -> list:
+    if USE_LOCAL_MOCK:
+        from app.controller.mock_router import query_flights
+        logger.info(f"Querying local flights: {origin} -> {destination}")
+        return query_flights(origin=origin, destination=destination)
+        
     url = f"{MOCK_API_BASE_URL}/flights/available_flights"
     params = {"origin": origin, "destination": destination}
     try:
@@ -17,6 +22,11 @@ def get_available_flights(origin: str, destination: str) -> list:
         return []
 
 def get_available_hotels(city: str, rating: float = None) -> list:
+    if USE_LOCAL_MOCK:
+        from app.controller.mock_router import query_hotels
+        logger.info(f"Querying local hotels in {city}")
+        return query_hotels(city=city, rating=rating)
+
     url = f"{MOCK_API_BASE_URL}/hotels/available_hotels"
     params = {"city": city}
     if rating is not None:
@@ -31,6 +41,11 @@ def get_available_hotels(city: str, rating: float = None) -> list:
         return []
 
 def get_available_activities(city: str) -> list:
+    if USE_LOCAL_MOCK:
+        from app.controller.mock_router import query_activities
+        logger.info(f"Querying local activities in {city}")
+        return query_activities(city=city)
+
     url = f"{MOCK_API_BASE_URL}/thingsToDo/available_activities"
     params = {"city": city}
     try:
@@ -43,6 +58,18 @@ def get_available_activities(city: str) -> list:
         return []
 
 def book_item(name: str, item_id: str) -> dict:
+    if USE_LOCAL_MOCK:
+        from app.controller.mock_router import perform_booking
+        logger.info(f"Booking local item {item_id} for guest {name}")
+        item_type = "general"
+        if item_id.startswith("HTL-"):
+            item_type = "hotels"
+        elif item_id.startswith("ACT-"):
+            item_type = "activities"
+        elif item_id.startswith("FLT-"):
+            item_type = "flights"
+        return perform_booking(name=name, item_id=item_id, item_type=item_type)
+
     url = f"{MOCK_API_BASE_URL}/book"
     payload = {"name": name, "itemId": item_id}
     try:
@@ -55,6 +82,11 @@ def book_item(name: str, item_id: str) -> dict:
         return {"status": "error", "message": str(e)}
 
 def get_active_bookings() -> list:
+    if USE_LOCAL_MOCK:
+        from app.controller.mock_router import query_active_bookings
+        logger.info("Fetching local active bookings")
+        return query_active_bookings()
+
     url = f"{MOCK_API_BASE_URL}/bookings/active_bookings"
     try:
         logger.info("Fetching all active bookings")

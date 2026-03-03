@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from app.models.schemas import QueryRequest, BookRequest, GenerateSummaryRequest
 from app.service.agent_service import graph
 from app.repository.travel_client import book_item
-from app.config.settings import MOCK_API_BASE_URL
+from app.config.settings import MOCK_API_BASE_URL, USE_LOCAL_MOCK
 
 router = APIRouter()
 
@@ -93,6 +93,21 @@ def book_travel_item(request: BookRequest) -> dict:
 
 @router.get("/reviews/{item_id}")
 def get_item_reviews(item_id: str):
+    if USE_LOCAL_MOCK:
+        from app.controller.mock_router import query_hotels, query_activities, query_flights
+        try:
+            if item_id.startswith("HTL-"):
+                data = query_hotels(hotel_id=item_id)
+            elif item_id.startswith("ACT-"):
+                data = query_activities(activity_id=item_id)
+            else:
+                data = query_flights(flight_id=item_id)
+            if isinstance(data, list) and len(data) > 0:
+                return {"reviews": data[0].get("reviews", [])}
+            return {"reviews": []}
+        except Exception as e:
+            return {"reviews": [], "error": str(e)}
+
     if item_id.startswith("HTL-"):
         url = f"{MOCK_API_BASE_URL}/hotels/available_hotels"
         params = {"hotelID": item_id}

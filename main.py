@@ -18,6 +18,10 @@ app.add_middleware(
 # Register routes controller under /api prefix
 app.include_router(router, prefix="/api")
 
+# Register database mock router under /mock-api prefix
+from app.controller.mock_router import mock_router
+app.include_router(mock_router, prefix="/mock-api")
+
 @app.exception_handler(Exception)
 def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
