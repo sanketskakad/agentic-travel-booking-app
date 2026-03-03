@@ -1,3 +1,13 @@
+---
+title: Agentic Travel Planner
+emoji: ✈️
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+app_file: app.py
+pinned: false
+---
+
 # ✈️ Multi-Agent Travel Booking App
 
 An AI-powered multi-agent travel booking system using local zero-key LLM mock APIs for flights, hotels, activities, and reservations.
