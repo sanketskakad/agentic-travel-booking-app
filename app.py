@@ -1,4 +1,6 @@
 import os
+os.environ["GRADIO_SERVER_PORT"] = "7861"
+
 import gradio as gr
 from main import app as fastapi_app
 
