@@ -13,5 +13,4 @@ dependencies = [
     "requests>=2.34.2",
     "uvicorn>=0.52.1",
     "aiofiles",
-    "gradio",
 ]
