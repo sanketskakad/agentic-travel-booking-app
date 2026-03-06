@@ -5,3 +5,4 @@ langgraph>=1.2.10
 python-dotenv>=1.2.2
 requests>=2.34.2
 aiofiles
+gradio==4.44.1
