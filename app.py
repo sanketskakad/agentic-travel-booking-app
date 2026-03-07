@@ -11,3 +11,6 @@ app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio")
 
 # Override demo.app so Hugging Face's Gradio SDK runner launches our combined app
 demo.app = app
+
+# Launch the Gradio app to keep the server running on Hugging Face
+demo.launch(server_name="0.0.0.0", server_port=7860)
