@@ -1,14 +1,7 @@
 import os
 import gradio as gr
 from main import app as fastapi_app
-
-try:
-    import spaces
-except ImportError:
-    class spaces:
-        @staticmethod
-        def GPU(func):
-            return func
+import spaces
 
 @spaces.GPU
 def dummy_gpu_func():

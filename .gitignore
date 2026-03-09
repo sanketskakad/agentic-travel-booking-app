@@ -4,6 +4,7 @@ node_modules/
 /build
 package-lock.json
 yarn.lock
+spaces.py
 
 # Python Caches & Build Outputs
 __pycache__/
