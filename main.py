@@ -32,12 +32,21 @@ def global_exception_handler(request: Request, exc: Exception):
 
 
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import os
 
-# Mount frontend built assets if the static directory exists
 static_dir = os.path.join(os.path.dirname(__file__), "static")
-if os.path.exists(static_dir):
-    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+assets_dir = os.path.join(static_dir, "assets")
+
+if os.path.exists(assets_dir):
+    app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+@app.get("/")
+def serve_root_index():
+    index_file = os.path.join(static_dir, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {"status": "ok", "message": "Multi-Agent Travel Planner API"}
 
 if __name__ == "__main__":
     import uvicorn
