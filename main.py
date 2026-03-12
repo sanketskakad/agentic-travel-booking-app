@@ -42,6 +42,7 @@ if os.path.exists(assets_dir):
     app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
 @app.get("/")
+@app.get("/ui")
 def serve_root_index():
     index_file = os.path.join(static_dir, "index.html")
     if os.path.exists(index_file):
