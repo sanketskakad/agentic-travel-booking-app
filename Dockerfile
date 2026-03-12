@@ -12,7 +12,8 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 # Set up environment variables
 ENV UV_COMPILE_BYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV PORT=7860
+ENV PORT=8000
+ENV USE_LOCAL_MOCK=true
 ENV MOCK_API_BASE_URL=http://localhost:3000
 
 # Install Node.js for mock database server
@@ -53,7 +54,7 @@ RUN chmod +x /app/start.sh && chown 1000:1000 /app/start.sh
 USER 1000
 
 # Expose port 7860 for Hugging Face Spaces
-EXPOSE 7860
+EXPOSE 8000
 
 # Run entrypoint script
 CMD ["/app/start.sh"]
