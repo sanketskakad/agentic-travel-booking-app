@@ -5,7 +5,7 @@ from typing import Optional, List
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, START, END
 from app.models.schemas import State, FlightState, HotelState, ActivityState
-from app.repository.travel_client import get_available_flights, get_available_hotels, get_available_activities
+from app.repositories.travel_repository import get_available_flights, get_available_hotels, get_available_activities
 
 logger = logging.getLogger("agent_service")
 

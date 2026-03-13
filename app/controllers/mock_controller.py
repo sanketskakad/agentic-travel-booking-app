@@ -7,8 +7,8 @@ from fastapi.responses import JSONResponse
 
 mock_router = APIRouter()
 
-# Load db.json
-db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "mock-backend", "database", "db.json")
+# Path to embedded db.json within the app package
+db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "database", "db.json")
 
 def load_db():
     if not os.path.exists(db_path):
@@ -35,11 +35,9 @@ def filter_data(data_list, query_params):
     if not isinstance(data_list, list):
         return data_list
 
-    # Extract price filters
     min_price = query_params.get("minPrice") or query_params.get("minprice")
     max_price = query_params.get("maxPrice") or query_params.get("maxprice")
 
-    # Build standard query keys to match
     standard_query = {}
     for k, v in query_params.items():
         if k.lower() not in ["minprice", "maxprice"]:
@@ -47,7 +45,6 @@ def filter_data(data_list, query_params):
 
     filtered = data_list
 
-    # Standard filters
     if standard_query:
         for k, val in standard_query.items():
             if not val:
@@ -55,7 +52,6 @@ def filter_data(data_list, query_params):
             if k.lower() == "date":
                 continue # Skip date filtering as daily frequency is simulated
             
-            # Map aliases
             target_keys = [k]
             if k.lower() == "source":
                 target_keys = ["originCode", "origin", "source", "from"]
@@ -75,7 +71,6 @@ def filter_data(data_list, query_params):
                     new_filtered.append(item)
             filtered = new_filtered
 
-    # Price range filters
     if min_price is not None or max_price is not None:
         try:
             min_p = float(min_price) if min_price else -float("inf")

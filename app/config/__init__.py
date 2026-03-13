@@ -1,1 +1,1 @@
-# app.config subpackage definition
+# Config Package

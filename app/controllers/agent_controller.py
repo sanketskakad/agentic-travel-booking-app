@@ -2,8 +2,8 @@ import os
 import requests
 from fastapi import APIRouter
 from app.models.schemas import QueryRequest, BookRequest, GenerateSummaryRequest
-from app.service.agent_service import graph
-from app.repository.travel_client import book_item
+from app.services.agent_service import graph
+from app.repositories.travel_repository import book_item
 from app.config.settings import MOCK_API_BASE_URL, USE_LOCAL_MOCK
 
 router = APIRouter()
@@ -11,7 +11,6 @@ router = APIRouter()
 @router.post("/travelplan")
 def get_travel_plan(request: QueryRequest) -> dict:
     user_query = request.query
-    # Invoke the compiled LangGraph workflow
     result = graph.invoke({
         "message": user_query,
         "origin_city": "",
@@ -94,7 +93,7 @@ def book_travel_item(request: BookRequest) -> dict:
 @router.get("/reviews/{item_id}")
 def get_item_reviews(item_id: str):
     if USE_LOCAL_MOCK:
-        from app.controller.mock_router import query_hotels, query_activities, query_flights
+        from app.controllers.mock_controller import query_hotels, query_activities, query_flights
         try:
             if item_id.startswith("HTL-"):
                 data = query_hotels(hotel_id=item_id)
@@ -134,7 +133,6 @@ def generate_summary(request: GenerateSummaryRequest):
     
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key or api_key == "your-api-key":
-        # Fallback if no key
         return {"summary": "Booking Confirmed! (LLM summary could not be generated as GROQ_API_KEY is not configured.)"}
         
     llm = ChatGroq(model_name="llama-3.1-8b-instant", temperature=0.7)
@@ -158,7 +156,7 @@ def generate_summary(request: GenerateSummaryRequest):
     )
     
     try:
-        response = llm.invoke(prompt)
-        return {"summary": response.content}
+        res = llm.invoke(prompt)
+        return {"summary": res.content}
     except Exception as e:
-        return {"summary": f"Booking Confirmed!\n\nWe booked your items, but we couldn't generate a summary due to: {str(e)}"}
+        return {"summary": f"Booking Confirmed! (Failed to generate itinerary summary: {str(e)})"}

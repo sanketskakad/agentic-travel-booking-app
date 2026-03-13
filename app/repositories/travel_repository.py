@@ -2,11 +2,11 @@ import logging
 import requests
 from app.config.settings import MOCK_API_BASE_URL, USE_LOCAL_MOCK
 
-logger = logging.getLogger("travel_client")
+logger = logging.getLogger("travel_repository")
 
 def get_available_flights(origin: str, destination: str) -> list:
     if USE_LOCAL_MOCK:
-        from app.controller.mock_router import query_flights
+        from app.controllers.mock_controller import query_flights
         logger.info(f"Querying local flights: {origin} -> {destination}")
         return query_flights(origin=origin, destination=destination)
         
@@ -23,7 +23,7 @@ def get_available_flights(origin: str, destination: str) -> list:
 
 def get_available_hotels(city: str, rating: float = None) -> list:
     if USE_LOCAL_MOCK:
-        from app.controller.mock_router import query_hotels
+        from app.controllers.mock_controller import query_hotels
         logger.info(f"Querying local hotels in {city}")
         return query_hotels(city=city, rating=rating)
 
@@ -42,7 +42,7 @@ def get_available_hotels(city: str, rating: float = None) -> list:
 
 def get_available_activities(city: str) -> list:
     if USE_LOCAL_MOCK:
-        from app.controller.mock_router import query_activities
+        from app.controllers.mock_controller import query_activities
         logger.info(f"Querying local activities in {city}")
         return query_activities(city=city)
 
@@ -59,7 +59,7 @@ def get_available_activities(city: str) -> list:
 
 def book_item(name: str, item_id: str) -> dict:
     if USE_LOCAL_MOCK:
-        from app.controller.mock_router import perform_booking
+        from app.controllers.mock_controller import perform_booking
         logger.info(f"Booking local item {item_id} for guest {name}")
         item_type = "general"
         if item_id.startswith("HTL-"):
@@ -83,7 +83,7 @@ def book_item(name: str, item_id: str) -> dict:
 
 def get_active_bookings() -> list:
     if USE_LOCAL_MOCK:
-        from app.controller.mock_router import query_active_bookings
+        from app.controllers.mock_controller import query_active_bookings
         logger.info("Fetching local active bookings")
         return query_active_bookings()
 

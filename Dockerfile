@@ -14,15 +14,9 @@ ENV UV_COMPILE_BYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8000
 ENV USE_LOCAL_MOCK=true
-ENV MOCK_API_BASE_URL=http://localhost:3000
+ENV UV_CACHE_DIR=/tmp/uv-cache
 
-# Install Node.js for mock database server
-RUN apt-get update && apt-get install -y curl gnupg && \
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/*
-
-# Set up app directory and permissions for Hugging Face non-root user (UID 1000)
+# Set up app directory and permissions
 WORKDIR /app
 RUN mkdir -p /app && chown -R 1000:1000 /app
 
@@ -30,16 +24,8 @@ RUN mkdir -p /app && chown -R 1000:1000 /app
 COPY pyproject.toml uv.lock ./
 
 # Install python project dependencies
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,target=/tmp/uv-cache \
     uv sync --frozen --no-install-project || uv sync --no-install-project
-
-# Copy mock backend code and install its npm dependencies
-COPY --chown=1000:1000 mock-backend/ /app/mock-backend/
-WORKDIR /app/mock-backend
-RUN npm install --production
-
-# Return to app directory
-WORKDIR /app
 
 # Copy application source code
 COPY --chown=1000:1000 . .
@@ -50,10 +36,10 @@ COPY --from=frontend-builder --chown=1000:1000 /build/dist /app/static
 # Make start.sh executable and set ownership
 RUN chmod +x /app/start.sh && chown 1000:1000 /app/start.sh
 
-# Switch to Hugging Face non-root user
+# Switch to non-root user
 USER 1000
 
-# Expose port 7860 for Hugging Face Spaces
+# Expose default port
 EXPOSE 8000
 
 # Run entrypoint script
