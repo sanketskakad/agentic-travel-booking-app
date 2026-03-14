@@ -15,6 +15,8 @@ ENV PYTHONUNBUFFERED=1
 ENV PORT=8000
 ENV USE_LOCAL_MOCK=true
 ENV UV_CACHE_DIR=/tmp/uv-cache
+ENV UV_LINK_MODE=copy
+ENV UV_PYTHON_INSTALL_DIR=/app/.python
 
 # Set up app directory and permissions
 WORKDIR /app
@@ -27,17 +29,17 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/tmp/uv-cache \
     uv sync --frozen --no-install-project || uv sync --no-install-project
 
-# Ensure virtual environment and dependencies are owned by non-root user
-RUN chown -R 1000:1000 /app
-
 # Copy application source code
 COPY --chown=1000:1000 . .
 
 # Copy static frontend assets built in stage 1
 COPY --from=frontend-builder --chown=1000:1000 /build/dist /app/static
 
-# Make start.sh executable and set ownership
-RUN chmod +x /app/start.sh && chown 1000:1000 /app/start.sh
+# Ensure everything inside /app is owned by the non-root user
+RUN chown -R 1000:1000 /app
+
+# Make start.sh executable
+RUN chmod +x /app/start.sh
 
 # Switch to non-root user
 USER 1000
