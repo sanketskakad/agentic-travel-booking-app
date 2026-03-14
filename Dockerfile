@@ -27,6 +27,9 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/tmp/uv-cache \
     uv sync --frozen --no-install-project || uv sync --no-install-project
 
+# Ensure virtual environment and dependencies are owned by non-root user
+RUN chown -R 1000:1000 /app
+
 # Copy application source code
 COPY --chown=1000:1000 . .
 
