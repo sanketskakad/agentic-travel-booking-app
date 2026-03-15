@@ -1,40 +1,65 @@
----
-title: Agentic Travel Planner
-emoji: ✈️
-colorFrom: blue
-colorTo: indigo
-sdk: gradio
-app_file: app.py
-pinned: false
-hardware: cpu-basic
----
+# ✈️ Agentic Travel Planner
 
-# ✈️ Multi-Agent Travel Planner
+**Agentic Travel Planner** is an advanced, enterprise-grade AI travel planning ecosystem powered by a stateful multi-agent orchestration workflow built on FastAPI, LangGraph, and LangChain. The system automatically parses natural language travel queries, extracts structured itineraries (origin, destination, travel dates, budget), and coordinates a network of specialized AI agents to inspect, compare, and coordinate flights, hotel accommodations, and local activities. 
 
-**Agentic Travel Planner** is an advanced, enterprise-grade AI travel planning ecosystem powered by a multi-agent orchestration workflow built on FastAPI, LangGraph, and LangChain. The system automatically parses natural language travel queries, extracts structured itineraries (origin, destination, travel dates, budget), and coordinates a network of specialized AI agents to inspect, compare, and coordinate flights, hotel accommodations, and local activities. Featuring built-in JSON database-backed booking capabilities, real-time customer reviews retrieval, and automated LLM-generated travel itinerary summaries, it showcases the future of stateful, autonomous agentic service orchestration.
+Featuring built-in JSON database-backed booking capabilities, real-time customer reviews retrieval, and automated LLM-generated travel itinerary summaries, it showcases the future of stateful, autonomous agentic service orchestration.
 
 ---
 
-## 📂 Backend Python Codebase Structure
+## ✨ Core Capabilities
 
-- **`app.py`**: Root entrypoint wrapper that runs the Uvicorn application on the configured port.
-- **`main.py`**: Local dev runner script.
-- **`requirements.txt`**: Lists Python dependency packages (FastAPI, LangGraph, Groq, LangChain).
-- **`app/main.py`**: Primary FastAPI application setup, CORS middleware registration, static file mounts, and route controller inclusions.
-- **`app/config/settings.py`**: Application settings and configuration environment variables.
-- **`app/controllers/`**: Route controllers handling agent workflows (`agent_controller.py`) and mock database APIs (`mock_controller.py`).
-- **`app/services/`**: Business logic layer including the LangGraph agent state graph compiler (`agent_service.py`).
-- **`app/repositories/`**: Data access layer managing local query logic and file transactions (`travel_repository.py`).
-- **`app/models/`**: Shared domain models and validation schemas (`schemas.py`).
-- **`app/database/`**: Consolidated dataset JSON store (`db.json`).
+*   **Natural Language Processing**: Translates unstructured user prompts (e.g., *"Plan a 5-day cheap trip to Paris starting Sep 1st"*) into structured parameters using LLM-backed schema extraction.
+*   **Stateful Agentic Orchestration**: Uses LangGraph to compile a workflow graph that executes parallel and sequential searches using dedicated Flight, Hotel, and Activity agents.
+*   **Layered Database Abstraction**: Connects to either external HTTP APIs or executes optimized direct-query local resolution against a static JSON database layer.
+*   **Automated Summarization**: Uses generative AI completion to compile booked items (flights, hotels, activities) into a cohesive, highly personalized travel itinerary with markdown formatting and local destination tips.
+
+---
+
+## 📂 Architecture and Codebase Structure
+
+The project follows a clean, decoupled directory structure separating route handling, business logic, data models, and database clients:
+
+```
+multi-agents-travel-booking-app/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                     # Primary FastAPI application bootloader & middleware
+│   ├── config/
+│   │   ├── __init__.py
+│   │   └── settings.py             # Environment configuration & settings variables
+│   ├── controllers/
+│   │   ├── __init__.py
+│   │   ├── agent_controller.py     # Main travel planning, review, & summary endpoints
+│   │   └── mock_controller.py      # Integrated dataset mock API endpoints
+│   ├── database/
+│   │   ├── __init__.py
+│   │   └── db.json                 # Core dataset store containing flights, hotels, and active bookings
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── schemas.py              # Pydantic validation and LangGraph state schemas
+│   ├── repositories/
+│   │   ├── __init__.py
+│   │   └── travel_repository.py    # Database access layer abstraction (local and remote resolution)
+│   └── services/
+│       ├── __init__.py
+│       └── agent_service.py        # LangGraph workflow compiler and agent nodes
+├── frontend/                       # React SPA client code
+├── static/                         # Production static assets served by FastAPI
+├── Dockerfile                      # Optimized production multi-stage build config
+├── README.md                       # Professional documentation
+├── pyproject.toml                  # Project packaging and lock settings
+├── requirements.txt                # Static dependencies lockfile
+├── start.sh                        # Production runtime runner script
+└── uv.lock                         # Fast Python package resolution lockfile
+```
 
 ---
 
 ## 🛠️ Step-by-Step Local Setup
 
 ### 1. Prerequisites
-- Python 3.12+ installed.
-- A Groq API Key (Sign up and get one for free on the [Groq Console](https://console.groq.com/)).
+*   Python 3.12 or higher.
+*   A Groq API Key (Sign up and get one for free on the [Groq Console](https://console.groq.com/)).
 
 ### 2. Configure Environment Variables
 Create a `.env` file in the root directory:
@@ -45,55 +70,61 @@ USE_LOCAL_MOCK=true
 ```
 
 ### 3. Install Dependencies
-Run the following command using `pip` or the fast `uv` package manager:
+Run the following command using the fast `uv` package manager:
 ```bash
-# Using standard pip
-pip install -r requirements.txt
+# Install uv if you haven't already
+pip install uv
 
-# Or using uv
-uv pip install -r requirements.txt
+# Sync project dependencies
+uv sync
 ```
+*(Alternatively, you can run `pip install -r requirements.txt`)*
 
 ### 4. Start the Application
-Run the Python entrypoint:
+Run the Python entrypoint script:
 ```bash
-python app.py
+uv run python app.py
 ```
-The server will boot on `http://localhost:8000` (or port specified in your `.env`).
+The server will start on `http://localhost:8000`.
 
 ---
 
 ## 🔌 API Endpoints Reference
 
-### 🚀 Travel Agent API
+### 🚀 Travel Agent Workflow API
 
-#### Post Travel Query
-- **Endpoint**: `POST /api/travelplan`
-- **Payload**:
-  ```json
-  { "query": "Plan a trip from Berlin to Paris on 2026-09-01 returning on 2026-09-10" }
-  ```
-- **Description**: Submits the user prompt to the compiled LangGraph workflow.
-
-#### Get Item Reviews
-- **Endpoint**: `GET /api/reviews/{item_id}`
-- **Description**: Retrieves user reviews mock data for a flight, hotel, or activity.
-
-#### Generate Trip Summary
-- **Endpoint**: `POST /api/generatesummary`
-- **Payload**:
-  ```json
-  { "bookingDetails": "..." }
-  ```
-- **Description**: Compiles a structured markdown summary of the booked selections using LLM completion.
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/travelplan` | Submits natural language queries to the compiled LangGraph workflow. |
+| `POST` | `/api/book` | Makes a database reservation booking for a flight, hotel, or activity. |
+| `GET` | `/api/reviews/{item_id}` | Retrieves real-time customer reviews for a flight, hotel, or activity. |
+| `POST` | `/api/generatesummary` | Compiles a structured markdown summary itinerary of the booked selections. |
+| `GET` | `/api/health` | Service health status check. |
 
 ---
 
-### 🗄️ Integrated Python Database Mock API
-These mock database routes run inside the same FastAPI process (reading/writing to `mock-backend/database/db.json` locally):
+### 🗄️ Integrated Database Mock API
 
-- **`GET /mock-api/flights/available_flights`**: Returns available departure/arrival flights matching origin/destination. Supports price range filtering via query params (`minPrice`/`maxPrice`).
-- **`GET /mock-api/hotels/available_hotels`**: Lists hotels by city, rating, and price.
-- **`GET /mock-api/thingsToDo/available_activities`**: Lists things to do matching target cities.
-- **`GET /mock-api/bookings/active_bookings`**: Lists all recorded travel bookings.
-- **`POST /mock-api/book`**: Creates a reservation booking in the local JSON database database.
+These endpoints execute local JSON queries against `app/database/db.json` when `USE_LOCAL_MOCK=true` is set:
+
+| Method | Endpoint | Query Parameters | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/mock-api/flights/available_flights` | `origin`, `destination`, `minPrice`, `maxPrice` | Filters and retrieves available flight entries. |
+| `GET` | `/mock-api/hotels/available_hotels` | `city`, `rating`, `minPrice`, `maxPrice` | Filters and retrieves hotel accommodations. |
+| `GET` | `/mock-api/thingsToDo/available_activities` | `city` | Retrieves destination activities. |
+| `GET` | `/mock-api/bookings/active_bookings` | None | Lists all active client bookings. |
+| `POST` | `/mock-api/book` | None *(Payload: `name`, `itemId`)* | Submits a reservation booking to the database. |
+
+---
+
+## 🐳 Production Deployment
+
+### Container Run via Docker
+```bash
+docker run -d \
+  -p 8000:8000 \
+  -e GROQ_API_KEY="your_groq_api_key" \
+  -e USE_LOCAL_MOCK="true" \
+  --name travel-planner \
+  sanketkakad/agentic-travel-planner:latest
+```
