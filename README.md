@@ -1,5 +1,7 @@
 # ✈️ Agentic Travel Planner
 
+🔗 **Live Production URL**: [https://sanket-kakad-agentic-travel-booking-app.onrender.com/](https://sanket-kakad-agentic-travel-booking-app.onrender.com/)
+
 **Agentic Travel Planner** is an advanced, enterprise-grade AI travel planning ecosystem powered by a stateful multi-agent orchestration workflow built on FastAPI, LangGraph, and LangChain. The system automatically parses natural language travel queries, extracts structured itineraries (origin, destination, travel dates, budget), and coordinates a network of specialized AI agents to inspect, compare, and coordinate flights, hotel accommodations, and local activities. 
 
 Featuring built-in JSON database-backed booking capabilities, real-time customer reviews retrieval, and automated LLM-generated travel itinerary summaries, it showcases the future of stateful, autonomous agentic service orchestration.
@@ -47,7 +49,7 @@ multi-agents-travel-booking-app/
 ├── static/                         # Production static assets served by FastAPI
 ├── Dockerfile                      # Optimized production multi-stage build config
 ├── README.md                       # Professional documentation
-├── pyproject.toml                  # Project packaging and lock settings
+├── pyproject.toml                  # Project packaging, metadata, and dependencies configuration
 ├── requirements.txt                # Static dependencies lockfile
 ├── start.sh                        # Production runtime runner script
 └── uv.lock                         # Fast Python package resolution lockfile
