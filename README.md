@@ -9,23 +9,24 @@ pinned: false
 hardware: cpu-basic
 ---
 
-# ✈️ Multi-Agent Travel Planner (FastAPI Backend)
+# ✈️ Multi-Agent Travel Planner
 
-An AI-powered multi-agent travel planning system built with FastAPI and LangGraph, using a fully integrated Python mock database server to search and book flights, hotels, activities, and itineraries.
+**Agentic Travel Planner** is an advanced, enterprise-grade AI travel planning ecosystem powered by a multi-agent orchestration workflow built on FastAPI, LangGraph, and LangChain. The system automatically parses natural language travel queries, extracts structured itineraries (origin, destination, travel dates, budget), and coordinates a network of specialized AI agents to inspect, compare, and coordinate flights, hotel accommodations, and local activities. Featuring built-in JSON database-backed booking capabilities, real-time customer reviews retrieval, and automated LLM-generated travel itinerary summaries, it showcases the future of stateful, autonomous agentic service orchestration.
 
 ---
 
 ## 📂 Backend Python Codebase Structure
 
-- **`app.py`**: The entrypoint that starts the Uvicorn server on port `7860` (or uses the `PORT` environment variable).
-- **`main.py`**: The FastAPI core app config. It registers route controllers, mounts CORS middleware, and configures static files serving.
-- **`requirements.txt`**: Lists all python dependency requirements (FastAPI, LangGraph, Groq, requests, aiofiles).
-- **`app/config/settings.py`**: Handles configuration variables such as server port, target mock API URLs, and the local direct-query execution switch.
-- **`app/controller/router.py`**: Primary router containing endpoints for executing the travel agent LangGraph workflows, fetching item reviews, and generating trip summaries.
-- **`app/controller/mock_router.py`**: In-memory database router containing Python ports of mock data search, price range filtering, and reservation bookings.
-- **`app/repository/travel_client.py`**: Client module managing database interactions (bypasses HTTP round-trips when `USE_LOCAL_MOCK` is active).
-- **`app/service/agent_service.py`**: Compiles the travel planner LangGraph orchestration graph.
-- **`app/models/schemas.py`**: Defines Pydantic validation schemas for API payloads.
+- **`app.py`**: Root entrypoint wrapper that runs the Uvicorn application on the configured port.
+- **`main.py`**: Local dev runner script.
+- **`requirements.txt`**: Lists Python dependency packages (FastAPI, LangGraph, Groq, LangChain).
+- **`app/main.py`**: Primary FastAPI application setup, CORS middleware registration, static file mounts, and route controller inclusions.
+- **`app/config/settings.py`**: Application settings and configuration environment variables.
+- **`app/controllers/`**: Route controllers handling agent workflows (`agent_controller.py`) and mock database APIs (`mock_controller.py`).
+- **`app/services/`**: Business logic layer including the LangGraph agent state graph compiler (`agent_service.py`).
+- **`app/repositories/`**: Data access layer managing local query logic and file transactions (`travel_repository.py`).
+- **`app/models/`**: Shared domain models and validation schemas (`schemas.py`).
+- **`app/database/`**: Consolidated dataset JSON store (`db.json`).
 
 ---
 
