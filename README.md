@@ -2,6 +2,11 @@
 
 🔗 **Live Production URL**: [https://sanket-kakad-agentic-travel-booking-app.onrender.com/](https://sanket-kakad-agentic-travel-booking-app.onrender.com/)
 
+---
+
+## 🎥 Application Demo
+<video src="static/multi-agentic-travel-booking-system.mov" width="100%" autoplay loop muted playsinline controls></video>
+
 **Agentic Travel Planner** is an advanced, enterprise-grade AI travel planning ecosystem powered by a stateful multi-agent orchestration workflow built on FastAPI, LangGraph, and LangChain. The system automatically parses natural language travel queries, extracts structured itineraries (origin, destination, travel dates, budget), and coordinates a network of specialized AI agents to inspect, compare, and coordinate flights, hotel accommodations, and local activities. 
 
 Featuring built-in JSON database-backed booking capabilities, real-time customer reviews retrieval, and automated LLM-generated travel itinerary summaries, it showcases the future of stateful, autonomous agentic service orchestration.
