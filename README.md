@@ -5,9 +5,8 @@
 ---
 
 ## 🎥 Application Demo
-If the video player below does not render, you can [download/view the demo video directly here](https://github.com/sanketskakad/agentic-travel-booking-app/raw/main/static/multi-agentic-travel-booking-system.mov).
 
-<video src="https://github.com/sanketskakad/agentic-travel-booking-app/raw/main/static/multi-agentic-travel-booking-system.mov" width="100%" autoplay loop muted playsinline controls></video>
+[![Agentic Travel Planner Demo](https://img.youtube.com/vi/b3lpHCb_nlU/maxresdefault.jpg)](https://www.youtube.com/watch?v=b3lpHCb_nlU)
 
 **Agentic Travel Planner** is an advanced, enterprise-grade AI travel planning ecosystem powered by a stateful multi-agent orchestration workflow built on FastAPI, LangGraph, and LangChain. The system automatically parses natural language travel queries, extracts structured itineraries (origin, destination, travel dates, budget), and coordinates a network of specialized AI agents to inspect, compare, and coordinate flights, hotel accommodations, and local activities. 
 
