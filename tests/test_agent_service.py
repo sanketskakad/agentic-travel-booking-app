@@ -14,8 +14,9 @@ from app.services.agent_service import (
 
 def test_extract_travel_details_missing_key(monkeypatch):
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
-    with pytest.raises(ValueError, match="GROQ_API_KEY is not configured"):
-        extract_travel_details("Plan a trip to Paris")
+    details = extract_travel_details("Trip from Berlin to Paris on 2026-09-01")
+    assert details["origin_city"] == "Berlin"
+    assert details["destination_city"] == "Paris"
 
 @patch("app.services.agent_service.ChatGroq")
 def test_extract_travel_details_success(mock_chat_groq, monkeypatch):

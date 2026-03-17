@@ -25,13 +25,13 @@ def parse_details_fallback(message: str) -> dict:
     budget = "Not specified"
 
     # Match "from <Origin> to <Destination>"
-    match_route = re.search(r'from\s+([A-Za-z\s]+?)\s+to\s+([A-Za-z\s]+?)(?:[\,\.\;\:]|\s+departing|\s+returning|\s+hotels|\s+and|\s+in|$)', message, re.IGNORECASE)
+    match_route = re.search(r'from\s+([A-Za-z\s]+?)\s+to\s+([A-Za-z\s]+?)(?:[\,\.\;\:]|\s+departing|\s+returning|\s+hotels|\s+and|\s+in|\s+on|$)', message, re.IGNORECASE)
     if match_route:
         origin = match_route.group(1).strip().title()
         destination = match_route.group(2).strip().title()
     else:
         # Match "to <Destination>" or "in <Destination>"
-        match_dest = re.search(r'(?:to|in)\s+([A-Za-z\s]+?)(?:[\,\.\;\:]|\s+departing|\s+returning|\s+hotels|\s+and|$)', message, re.IGNORECASE)
+        match_dest = re.search(r'(?:to|in)\s+([A-Za-z\s]+?)(?:[\,\.\;\:]|\s+departing|\s+returning|\s+hotels|\s+and|\s+on|$)', message, re.IGNORECASE)
         if match_dest:
             destination = match_dest.group(1).strip().title()
 
