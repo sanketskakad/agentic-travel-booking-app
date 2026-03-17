@@ -1,3 +1,39 @@
+# Git configuration
+.git
+.gitignore
+.dockerignore
+
+# Dependencies and build folders
+node_modules/
+dist/
+build/
+
+# Python Virtual Environments & Caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# IDEs and local files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+
 # Dependencies
 node_modules/
 /dist
@@ -64,4 +100,29 @@ Thumbs.db
 
 .agents/*
 .claude/*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 graphify-out

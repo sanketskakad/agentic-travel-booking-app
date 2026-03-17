@@ -45,9 +45,12 @@ class State(TypedDict):
     flight_state: List[FlightState]
     return_flight_state: List[FlightState]
     activity_state: List[ActivityState]
+    is_valid: Optional[bool]
+    clarification_message: Optional[str]
 
 class QueryRequest(BaseModel):
     query: str
+    thread_id: Optional[str] = "default_thread"
 
 class BookRequest(BaseModel):
     name: str

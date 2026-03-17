@@ -1,5 +1,11 @@
 # ✈️ Agentic Travel Planner
 
+![Python Version](https://img.shields.io/badge/python-3.12%2B-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-green.svg)
+![LangGraph](https://img.shields.io/badge/LangGraph-1.2.10-orange.svg)
+![Build Status](https://github.com/sanketskakad/agentic-travel-booking-app/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
 🔗 **Live Production URL**: [https://sanket-kakad-agentic-travel-booking-app.onrender.com/](https://sanket-kakad-agentic-travel-booking-app.onrender.com/)
 
 ---
@@ -14,10 +20,16 @@ Featuring built-in JSON database-backed booking capabilities, real-time customer
 
 ---
 
+## 📐 Visual Architecture Diagram
+
+![Agentic Travel Planner Architecture](docs/architecture.png)
+
+---
+
 ## ✨ Core Capabilities
 
 *   **Natural Language Processing**: Translates unstructured user prompts (e.g., *"Plan a 5-day cheap trip to Paris starting Sep 1st"*) into structured parameters using LLM-backed schema extraction.
-*   **Stateful Agentic Orchestration**: Uses LangGraph to compile a workflow graph that executes parallel and sequential searches using dedicated Flight, Hotel, and Activity agents.
+*   **Stateful Agentic Orchestration**: Uses LangGraph to compile a workflow graph with `MemorySaver` state persistence (`thread_id`) and conditional edge validation routing.
 *   **Layered Database Abstraction**: Connects to either external HTTP APIs or executes optimized direct-query local resolution against a static JSON database layer.
 *   **Automated Summarization**: Uses generative AI completion to compile booked items (flights, hotels, activities) into a cohesive, highly personalized travel itinerary with markdown formatting and local destination tips.
 
@@ -29,36 +41,23 @@ The project follows a clean, decoupled directory structure separating route hand
 
 ```
 multi-agents-travel-booking-app/
+├── .github/workflows/ci.yml        # GitHub Actions CI pipeline (linting & pytest)
 ├── app/
-│   ├── __init__.py
-│   ├── main.py                     # Primary FastAPI application bootloader & middleware
-│   ├── config/
-│   │   ├── __init__.py
-│   │   └── settings.py             # Environment configuration & settings variables
-│   ├── controllers/
-│   │   ├── __init__.py
-│   │   ├── agent_controller.py     # Main travel planning, review, & summary endpoints
-│   │   └── mock_controller.py      # Integrated dataset mock API endpoints
-│   ├── database/
-│   │   ├── __init__.py
-│   │   └── db.json                 # Core dataset store containing flights, hotels, and active bookings
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── schemas.py              # Pydantic validation and LangGraph state schemas
-│   ├── repositories/
-│   │   ├── __init__.py
-│   │   └── travel_repository.py    # Database access layer abstraction (local and remote resolution)
+│   ├── main.py                     # Primary FastAPI application bootloader
+│   ├── controllers/                # Travel planning & mock dataset API route handlers
+│   ├── database/                   # Core dataset store (flights, hotels, bookings)
+│   ├── models/                     # Pydantic validation & LangGraph state schemas
+│   ├── repositories/               # Database access layer abstraction
 │   └── services/
-│       ├── __init__.py
-│       └── agent_service.py        # LangGraph workflow compiler and agent nodes
-├── frontend/                       # React SPA client code
+│       └── agent_service.py        # LangGraph workflow compiler, state checkpointer & agent nodes
+├── frontend/                       # React SPA client code & modular components
 ├── static/                         # Production static assets served by FastAPI
-├── Dockerfile                      # Optimized production multi-stage build config
-├── README.md                       # Professional documentation
-├── pyproject.toml                  # Project packaging, metadata, and dependencies configuration
-├── requirements.txt                # Static dependencies lockfile
-├── start.sh                        # Production runtime runner script
-└── uv.lock                         # Fast Python package resolution lockfile
+├── tests/                          # Automated Pytest suite (API endpoints & agent nodes)
+├── Dockerfile                      # Multi-stage production build configuration
+├── LICENSE                         # MIT open-source license
+├── README.md                       # Documentation & visual architecture diagram
+├── pyproject.toml                  # Dependencies & pytest configuration
+└── uv.lock                         # Package resolution lockfile
 ```
 
 ---
@@ -86,7 +85,6 @@ pip install uv
 # Sync project dependencies
 uv sync
 ```
-*(Alternatively, you can run `pip install -r requirements.txt`)*
 
 ### 4. Start the Application
 Run the Python entrypoint script:
@@ -94,6 +92,12 @@ Run the Python entrypoint script:
 uv run python app.py
 ```
 The server will start on `http://localhost:8000`.
+
+### 5. Run Automated Tests
+Execute the Pytest test suite for API endpoints, Pydantic schemas, and LangGraph workflow nodes:
+```bash
+uv run pytest
+```
 
 ---
 

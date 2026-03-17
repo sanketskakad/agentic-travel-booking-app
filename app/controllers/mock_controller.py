@@ -1,7 +1,7 @@
 import os
 import json
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -152,7 +152,7 @@ def perform_booking(name: str, item_id: str, item_type: str = "general", item_da
         "itemId": item_id,
         "itemData": item_data,
         "date": date,
-        "bookedAt": datetime.utcnow().isoformat() + "Z"
+        "bookedAt": datetime.now(timezone.utc).isoformat() + "Z"
     }
 
     if "bookings" not in db:

@@ -14,4 +14,10 @@ dependencies = [
     "uvicorn>=0.52.1",
     "aiofiles",
     "gradio",
+    "pytest>=8.0.0",
+    "httpx>=0.27.0",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Base URL for the mock travel API service
 MOCK_API_BASE_URL = os.getenv("MOCK_API_BASE_URL", "http://localhost:3000")

@@ -4,8 +4,12 @@ import {
   Plane, Hotel, Activity, Compass,
   Globe, Menu, X, Check, Calendar, User, ArrowRight
 } from 'lucide-react';
+import FlightSection from './components/FlightSection';
+import HotelSection from './components/HotelSection';
+import ActivitySection from './components/ActivitySection';
+import SummaryModal from './components/SummaryModal';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (window.location.port === '5173' ? '' : window.location.origin);
 
 /* ── Exact design system tokens ──────────────────────────────────────────── */
 const A = {

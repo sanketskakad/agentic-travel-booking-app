@@ -11,6 +11,8 @@ router = APIRouter()
 @router.post("/travelplan")
 def get_travel_plan(request: QueryRequest) -> dict:
     user_query = request.query
+    thread_id = getattr(request, "thread_id", None) or "default_thread"
+    config = {"configurable": {"thread_id": thread_id}}
     result = graph.invoke({
         "message": user_query,
         "origin_city": "",
@@ -21,8 +23,10 @@ def get_travel_plan(request: QueryRequest) -> dict:
         "flight_state": [],
         "return_flight_state": [],
         "hotel_state": [],
-        "activity_state": []
-    })
+        "activity_state": [],
+        "is_valid": True,
+        "clarification_message": None
+    }, config=config)
     
     origin = result.get("origin_city") or "Origin"
     destination = result.get("destination_city") or "Destination"

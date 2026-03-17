@@ -1,0 +1,28 @@
+graph TD
+    Start(["User Input Query"]) --> Extraction["extraction_node: LLM Structured Parsing"]
+    Extraction --> Cond{"validate_extracted_data: Is Destination Valid?"}
+    
+    Cond -- "Invalid / Missing" --> Clarification["clarification_node: Request Clarification"]
+    Clarification --> EndNode(["End Flow"])
+    
+    Cond -- "Valid Destination" --> FlightAgent["flight_agent: Outbound & Return Flight Search"]
+    FlightAgent --> HotelAgent["hotel_agent: Accommodation Search"]
+    HotelAgent --> ActivityAgent["activity_agent: Local Attractions & Tours Search"]
+    ActivityAgent --> EndNode
+    
+    subgraph Memory["Memory & State Persistence"]
+        Saver[("MemorySaver Checkpointer")] -. "thread_id Context" .-> Extraction
+        Saver -. "thread_id Context" .-> FlightAgent
+        Saver -. "thread_id Context" .-> HotelAgent
+        Saver -. "thread_id Context" .-> ActivityAgent
+    end
+
+    style Start fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1
+    style Extraction fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e40af
+    style Cond fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e
+    style Clarification fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#991b1b
+    style FlightAgent fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#065f46
+    style HotelAgent fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#065f46
+    style ActivityAgent fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#065f46
+    style Saver fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8
+    style EndNode fill:#f1f5f9,stroke:#475569,stroke-width:2px,color:#334155
