@@ -3,10 +3,12 @@
 ![Python Version](https://img.shields.io/badge/python-3.12%2B-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-green.svg)
 ![LangGraph](https://img.shields.io/badge/LangGraph-1.2.10-orange.svg)
+![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?logo=vercel)
 ![Build Status](https://github.com/sanketskakad/agentic-travel-booking-app/actions/workflows/ci.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-🔗 **Live Production URL**: [https://sanket-kakad-agentic-travel-booking-app.onrender.com/](https://sanket-kakad-agentic-travel-booking-app.onrender.com/)
+🔗 **Vercel Live App**: [https://sanket-kakad-agentic-travel-booking.vercel.app/](https://sanket-kakad-agentic-travel-booking.vercel.app/)  
+🔗 **Render Backup Service**: [https://sanket-kakad-agentic-travel-booking-app.onrender.com/](https://sanket-kakad-agentic-travel-booking-app.onrender.com/)
 
 ---
 
