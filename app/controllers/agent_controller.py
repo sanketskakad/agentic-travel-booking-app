@@ -131,16 +131,54 @@ def get_item_reviews(item_id: str):
     except Exception as e:
         return {"reviews": [], "error": str(e)}
 
+def build_fallback_itinerary_summary(guest_name: str, items: list) -> str:
+    """
+    Generates a structured, professional markdown itinerary summary when LLM generation fails or API key is invalid.
+    """
+    summary_lines = [
+        f"# ✈️ Travel Itinerary Summary for {guest_name}",
+        "",
+        "Congratulations on booking your upcoming EuroTrip! Here is your detailed itinerary breakdown:",
+        ""
+    ]
+
+    total_price = 0
+    grouped_items = {}
+    for item in items:
+        item_type = item.type.capitalize()
+        if item_type not in grouped_items:
+            grouped_items[item_type] = []
+        grouped_items[item_type].append(item)
+        total_price += item.price
+
+    for category, category_items in grouped_items.items():
+        icon = "✈️" if "Flight" in category else "🏨" if "Hotel" in category else "🎟️"
+        summary_lines.append(f"### {icon} {category} Reservations")
+        for it in category_items:
+            details_str = f" - {it.details}" if it.details else ""
+            summary_lines.append(f"- **{it.name}** (`{it.id}`): €{it.price / 100:.2f}{details_str}")
+        summary_lines.append("")
+
+    summary_lines.extend([
+        "---",
+        f"### 💳 Total Booking Cost: **€{total_price / 100:.2f}**",
+        "",
+        "### 💡 Useful Local Travel Tips",
+        "- **Public Transit**: Download local transport apps for real-time tram and train schedules.",
+        "- **Check-In**: Keep your booking reference IDs handy during check-in.",
+        "- **Local Currency & Payments**: Contactless cards are widely accepted across most European destinations."
+    ])
+
+    return "\n".join(summary_lines)
+
 @router.post("/generatesummary")
 def generate_summary(request: GenerateSummaryRequest):
     from langchain_groq import ChatGroq
     
     api_key = os.getenv("GROQ_API_KEY")
-    if not api_key or api_key == "your-api-key":
-        return {"summary": "Booking Confirmed! (LLM summary could not be generated as GROQ_API_KEY is not configured.)"}
+    if not api_key or api_key == "your-api-key" or api_key == "your_groq_api_key_here":
+        return {"summary": build_fallback_itinerary_summary(request.guestName, request.items)}
         
-    llm = ChatGroq(model_name="llama-3.1-8b-instant", temperature=0.7)
-    
     items_desc = []
     for item in request.items:
         desc = f"- {item.type.capitalize()}: {item.name} ({item.id}) - Price: €{item.price / 100:.2f}"
@@ -160,7 +198,8 @@ def generate_summary(request: GenerateSummaryRequest):
     )
     
     try:
+        llm = ChatGroq(model_name="llama-3.1-8b-instant", temperature=0.7)
         res = llm.invoke(prompt)
         return {"summary": res.content}
     except Exception as e:
-        return {"summary": f"Booking Confirmed! (Failed to generate itinerary summary: {str(e)})"}
+        return {"summary": build_fallback_itinerary_summary(request.guestName, request.items)}
