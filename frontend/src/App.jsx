@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Send, Sun, Moon, Plus, MessageSquare,
   Plane, Hotel, Activity, Compass,
-  Globe, Menu, X, Check, Calendar, User, ArrowRight
+  Globe, Menu, X, Check, Calendar, User, ArrowRight,
+  Trash2, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import FlightSection from './components/FlightSection';
 import HotelSection from './components/HotelSection';
@@ -192,6 +193,7 @@ function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('checking'); // 'checking' | 'online' | 'offline'
+  const [errorNotice, setErrorNotice] = useState(null); // { query: string, detail: string }
 
   // Expanded cards & reviews cache
   const [expandedCards, setExpandedCards] = useState({}); // { [cardId]: boolean }
@@ -285,12 +287,16 @@ function App() {
     const msg = (text || input).trim();
     if (!msg || loading) return;
     setInput('');
+    setErrorNotice(null);
 
     const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMsg = { role: 'user', content: msg, ts };
-    const title = activeChat.messages.length === 0
+    const currentChat = conversations.find(c => c.id === activeId) || conversations[0];
+    const prevConversationsSnapshot = conversations;
+
+    const title = currentChat.messages.length === 0
       ? (msg.length > 28 ? msg.slice(0, 26) + '…' : msg)
-      : activeChat.title;
+      : currentChat.title;
 
     setConversations(prev => prev.map(c =>
       c.id === activeId ? { ...c, title, messages: [...c.messages, userMsg] } : c
@@ -301,13 +307,18 @@ function App() {
       const res = await fetch(`${BACKEND_URL}/api/travelplan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: msg })
+        body: JSON.stringify({ query: msg, thread_id: activeId })
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.detail || `HTTP ${res.status}`);
       }
       const data = await res.json();
+
+      if (data.is_valid === false && data.clarification_message) {
+        throw new Error(data.clarification_message);
+      }
+
       const depDate = data.departure_date && data.departure_date !== 'Not specified' ? data.departure_date : '';
       const retDate = data.return_date && data.return_date !== 'Not specified' ? data.return_date : '';
       
@@ -323,8 +334,7 @@ function App() {
         ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
-      const currentChat = conversations.find(c => c.id === activeId);
-      const msgIndex = currentChat ? currentChat.messages.length + 1 : 1;
+      const msgIndex = currentChat.messages.length + 1;
 
       // Calculate duration in nights between dates
       let initialNights = 1;
@@ -356,19 +366,55 @@ function App() {
         c.id === activeId ? { ...c, messages: [...c.messages, botMsg] } : c
       ));
     } catch (e) {
-      const errMsg = { role: 'assistant', content: `Unable to reach the travel API. (${e.message})`, isError: true, ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-      setConversations(prev => prev.map(c =>
-        c.id === activeId ? { ...c, messages: [...c.messages, errMsg] } : c
-      ));
+      // Revert conversations so failed attempts are NOT saved into chat history
+      setConversations(prevConversationsSnapshot);
+      setErrorNotice({
+        query: msg,
+        detail: e.message || 'Unable to connect to travel service.'
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const newChat = () => {
+    setErrorNotice(null);
     const id = `chat_${Date.now()}`;
     setConversations(prev => [{ id, title: 'New Conversation', messages: [] }, ...prev]);
     setActiveId(id);
+  };
+
+  const clearAllHistory = () => {
+    if (window.confirm("Are you sure you want to clear all conversation history?")) {
+      const defaultChat = { id: `chat_${Date.now()}`, title: 'New Conversation', messages: [] };
+      setConversations([defaultChat]);
+      setActiveId(defaultChat.id);
+      setSelections({});
+      setBookingNames({});
+      setBookingSteps({});
+      setBookedMessages({});
+      setErrorNotice(null);
+      localStorage.removeItem('conversations');
+      localStorage.removeItem('selections');
+      localStorage.removeItem('booking-names');
+      localStorage.removeItem('booking-steps');
+      localStorage.removeItem('booked-messages');
+    }
+  };
+
+  const deleteConversation = (id) => {
+    setConversations(prev => {
+      const filtered = prev.filter(c => c.id !== id);
+      if (filtered.length === 0) {
+        const defaultChat = { id: `chat_${Date.now()}`, title: 'New Conversation', messages: [] };
+        setActiveId(defaultChat.id);
+        return [defaultChat];
+      }
+      if (activeId === id) {
+        setActiveId(filtered[0].id);
+      }
+      return filtered;
+    });
   };
 
   const fetchReviews = async (itemId) => {
@@ -656,27 +702,75 @@ function App() {
 
           {/* Conversation list */}
           <nav style={{ flex: 1, overflowY: 'auto', padding: '4px 10px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, padding: '12px 10px 8px' }}>Recent Trips</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 10px 8px' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub }}>Recent Trips</span>
+              {conversations.length > 0 && (
+                <button
+                  onClick={clearAllHistory}
+                  title="Clear all stored conversation history"
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px',
+                    fontSize: 10, fontWeight: 700, color: '#ff3b30', borderRadius: 6,
+                    display: 'flex', alignItems: 'center', gap: 4, opacity: 0.8
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                  onMouseLeave={e => e.currentTarget.style.opacity = 0.8}
+                >
+                  <Trash2 size={11} /> Clear
+                </button>
+              )}
+            </div>
+
             {conversations.map(chat => {
               const isActive = chat.id === activeId;
               return (
-                <button
-                  key={chat.id}
-                  onClick={() => setActiveId(chat.id)}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', textAlign: 'left',
-                    background: isActive ? (dark ? A.cardDark : 'rgba(0,0,0,0.05)') : 'transparent',
-                    color: isActive ? text : sub,
-                    fontSize: 13, fontWeight: isActive ? 600 : 500,
-                    marginBottom: 4, transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
-                  }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'; }}
-                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <MessageSquare size={15} style={{ flexShrink: 0, opacity: isActive ? 0.9 : 0.5 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{chat.title}</span>
-                </button>
+                <div key={chat.id} style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 4, position: 'relative' }}>
+                  <button
+                    onClick={() => {
+                      setErrorNotice(null);
+                      setActiveId(chat.id);
+                    }}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', textAlign: 'left',
+                      background: isActive ? (dark ? A.cardDark : 'rgba(0,0,0,0.05)') : 'transparent',
+                      color: isActive ? text : sub,
+                      fontSize: 13, fontWeight: isActive ? 600 : 500,
+                      transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+                      overflow: 'hidden'
+                    }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <MessageSquare size={15} style={{ flexShrink: 0, opacity: isActive ? 0.9 : 0.5 }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{chat.title}</span>
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteConversation(chat.id);
+                    }}
+                    title="Delete conversation"
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer', padding: 6,
+                      color: sub, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: 0.6, transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.color = '#ff3b30';
+                      e.currentTarget.style.opacity = 1;
+                      e.currentTarget.style.background = dark ? 'rgba(255,59,48,0.12)' : 'rgba(255,59,48,0.08)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.color = sub;
+                      e.currentTarget.style.opacity = 0.6;
+                      e.currentTarget.style.background = 'none';
+                    }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               );
             })}
           </nav>
@@ -1611,7 +1705,70 @@ function App() {
                 }}>
                   <span className="typing-dot" />
                   <span className="typing-dot" />
-                  <span className="typing-dot" />
+                </div>
+              </div>
+            )}
+
+            {/* Error Notice Doodle Alert */}
+            {errorNotice && (
+              <div className="animate-scale-in" style={{
+                marginTop: 16,
+                padding: '20px 24px',
+                borderRadius: 20,
+                background: dark ? 'rgba(255,59,48,0.1)' : '#fff5f5',
+                border: '1px solid rgba(255,59,48,0.25)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 16,
+                boxShadow: '0 4px 20px rgba(255,59,48,0.08)'
+              }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 16,
+                  background: 'rgba(255,59,48,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <AlertTriangle size={24} color="#ff3b30" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#ff3b30', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>⚠️ Something Went Wrong</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: text, lineHeight: 1.5 }}>
+                    Unable to retrieve travel data for query: <strong style={{ color: '#ff3b30' }}>"{errorNotice.query}"</strong>. ({errorNotice.detail})
+                  </div>
+                  <div style={{ fontSize: 11, color: sub, marginTop: 6, fontStyle: 'italic' }}>
+                    ℹ️ Failed search queries are automatically removed so your saved chat history contains only successful searches.
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                    <button
+                      onClick={() => {
+                        const q = errorNotice.query;
+                        setErrorNotice(null);
+                        send(q);
+                      }}
+                      style={{
+                        background: '#ff3b30', color: '#fff', border: 'none',
+                        borderRadius: 10, padding: '8px 16px', fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#e03126'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#ff3b30'}
+                    >
+                      <RefreshCw size={13} /> Retry Search
+                    </button>
+                    <button
+                      onClick={() => setErrorNotice(null)}
+                      style={{
+                        background: 'transparent', color: text, border: `1px solid ${border}`,
+                        borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
