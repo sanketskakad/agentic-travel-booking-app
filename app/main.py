@@ -35,7 +35,14 @@ def global_exception_handler(request: Request, exc: Exception):
     )
 
 # Static file serving & SPA single-page routing
-static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+static_dir = os.path.join(base_dir, "static")
+
+if not os.path.exists(static_dir):
+    alt_static = os.path.join(os.getcwd(), "static")
+    if os.path.exists(alt_static):
+        static_dir = alt_static
+
 assets_dir = os.path.join(static_dir, "assets")
 
 if os.path.exists(assets_dir):
@@ -62,7 +69,7 @@ def serve_root_index():
                 "Expires": "0",
             }
         )
-    return {"status": "ok", "message": "Multi-Agent Travel Planner API Service"}
+    return JSONResponse(status_code=404, content={"detail": f"Index file not found at {index_file}"})
 
 @app.get("/{full_path:path}")
 def serve_spa_fallback(full_path: str):

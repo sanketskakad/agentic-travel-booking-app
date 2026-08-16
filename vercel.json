@@ -7,7 +7,9 @@
       "config": {
         "includeFiles": [
           "static/**",
-          "app/**"
+          "app/**",
+          "../static/**",
+          "../app/**"
         ]
       }
     }
@@ -15,7 +17,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "api/index.py"
+      "dest": "/api/index.py"
     }
   ]
 }
