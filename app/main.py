@@ -41,6 +41,13 @@ assets_dir = os.path.join(static_dir, "assets")
 if os.path.exists(assets_dir):
     app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
+@app.get("/favicon.svg")
+def serve_favicon():
+    favicon_path = os.path.join(static_dir, "favicon.svg")
+    if os.path.exists(favicon_path):
+        return FileResponse(favicon_path)
+    return JSONResponse(status_code=404, content={"detail": "Favicon not found"})
+
 @app.get("/")
 @app.get("/ui")
 @app.get("/app")
@@ -56,6 +63,27 @@ def serve_root_index():
             }
         )
     return {"status": "ok", "message": "Multi-Agent Travel Planner API Service"}
+
+@app.get("/{full_path:path}")
+def serve_spa_fallback(full_path: str):
+    if full_path.startswith("api/") or full_path.startswith("mock-api/"):
+        return JSONResponse(status_code=404, content={"detail": "API endpoint not found"})
+    
+    file_path = os.path.join(static_dir, full_path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+        
+    index_file = os.path.join(static_dir, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(
+            index_file,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0",
+            }
+        )
+    return JSONResponse(status_code=404, content={"detail": "Page not found"})
 
 if __name__ == "__main__":
     import uvicorn
