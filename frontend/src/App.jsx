@@ -165,7 +165,7 @@ function markdownToHtml(md, dark) {
   html = html.replace(/\n/g, '<br />');
   
   // Trim redundant linebreaks after closing block elements
-  html = html.replace(/(<\/h2>|<\/h3>|<\/h4>|<\/hr>|<\/div>)\s*<br \/>/g, '$1');
+  html = html.replace(/(<\/h2>|<\/h3>|<\/h4>|<hr \/>|<\/div>)\s*<br \/>/g, '$1');
   
   return html;
 }
@@ -315,9 +315,7 @@ function App() {
       }
       const data = await res.json();
 
-      if (data.is_valid === false && data.clarification_message) {
-        throw new Error(data.clarification_message);
-      }
+      // Process clarification responses cleanly as standard assistant messages
 
       const depDate = data.departure_date && data.departure_date !== 'Not specified' ? data.departure_date : '';
       const retDate = data.return_date && data.return_date !== 'Not specified' ? data.return_date : '';
@@ -415,25 +413,41 @@ function App() {
       }
       return filtered;
     });
+    setSelections(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setBookingNames(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setBookingSteps(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   };
 
   const fetchReviews = async (itemId) => {
-    if (reviewsCache[itemId] || reviewsLoading[itemId]) return;
+    if ((reviewsCache[itemId] && !reviewsCache[itemId].error) || reviewsLoading[itemId]) return;
     setReviewsLoading(prev => ({ ...prev, [itemId]: true }));
     try {
       const res = await fetch(`${BACKEND_URL}/api/reviews/${itemId}`);
-      if (!res.ok) throw new Error("Failed to fetch reviews");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setReviewsCache(prev => ({ ...prev, [itemId]: data.reviews }));
+      setReviewsCache(prev => ({ ...prev, [itemId]: data.reviews || [] }));
     } catch (err) {
       console.error("Error fetching reviews:", err);
+      setReviewsCache(prev => ({ ...prev, [itemId]: { error: err.message || "Failed to load reviews." } }));
     } finally {
       setReviewsLoading(prev => ({ ...prev, [itemId]: false }));
     }
   };
 
   const renderReviewsSection = (itemId) => {
-    const reviews = reviewsCache[itemId];
+    const reviewsData = reviewsCache[itemId];
     const isLoading = reviewsLoading[itemId];
     
     if (isLoading) {
@@ -443,40 +457,72 @@ function App() {
         </div>
       );
     }
+
+    if (reviewsData && reviewsData.error) {
+      return (
+        <div style={{ padding: '12px 0 4px', fontSize: 12, color: '#ff3b30', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={e => e.stopPropagation()}>
+          <span>Failed to load reviews. Please try again.</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setReviewsCache(prev => {
+                const next = { ...prev };
+                delete next[itemId];
+                return next;
+              });
+              fetchReviews(itemId);
+            }}
+            style={{ background: 'transparent', color: A.blue, border: `1px solid ${border}`, borderRadius: 6, padding: '2px 8px', fontSize: 11, cursor: 'pointer' }}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
     
-    if (!reviews) return null;
-    if (reviews.length === 0) {
+    if (!reviewsData || !Array.isArray(reviewsData)) return null;
+    if (reviewsData.length === 0) {
       return <div style={{ padding: '12px 0 4px', fontSize: 12, color: A.gray }}>No reviews available for this item.</div>;
     }
     
-    const avgRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+    const validRatings = reviewsData.map(r => {
+      const num = Number(r?.rating);
+      return isNaN(num) ? 0 : Math.min(5, Math.max(0, num));
+    });
+    const sum = validRatings.reduce((acc, val) => acc + val, 0);
+    const numericAvg = reviewsData.length > 0 ? sum / reviewsData.length : 0;
+    const avgRatingVal = Math.min(5, Math.max(0, Math.round(numericAvg)));
+    const avgRatingStr = numericAvg.toFixed(1);
     
     return (
       <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10, borderTop: `1px solid ${border}`, paddingTop: 12 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, color: text }}>
-          <span>Rating: {avgRating} / 5.0</span>
-          <span style={{ color: '#ffd60a' }}>{'★'.repeat(Math.round(avgRating)) + '☆'.repeat(5 - Math.round(avgRating))}</span>
-          <span>({reviews.length} reviews)</span>
+          <span>Rating: {avgRatingStr} / 5.0</span>
+          <span style={{ color: '#ffd60a' }}>{'★'.repeat(avgRatingVal) + '☆'.repeat(5 - avgRatingVal)}</span>
+          <span>({reviewsData.length} reviews)</span>
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflowY: 'auto', paddingRight: 4 }}>
-          {reviews.map((r, rIdx) => (
-            <div key={rIdx} style={{ padding: 10, borderRadius: 10, background: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${border}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: text }}>
-                <span>{r.reviewer}</span>
-                <span style={{ color: sub }}>{r.date}</span>
+          {reviewsData.map((r, rIdx) => {
+            const rStarCount = Math.min(5, Math.max(0, Math.round(Number(r?.rating) || 0)));
+            return (
+              <div key={rIdx} style={{ padding: 10, borderRadius: 10, background: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${border}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: text }}>
+                  <span>{r.reviewer || 'Anonymous'}</span>
+                  <span style={{ color: sub }}>{r.date || ''}</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, fontSize: 11, color: '#ffd60a', margin: '4px 0' }}>
+                  <span>{'★'.repeat(rStarCount) + '☆'.repeat(5 - rStarCount)}</span>
+                  {r.aspects && Object.entries(r.aspects).map(([k, v]) => (
+                    <span key={k} style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: sub, textTransform: 'capitalize' }}>
+                      {k}: {v}
+                    </span>
+                  ))}
+                </div>
+                <p style={{ fontSize: 12, color: sub, margin: '6px 0 0', lineHeight: 1.45 }}>{r.comment || ''}</p>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, fontSize: 11, color: '#ffd60a', margin: '4px 0' }}>
-                <span>{'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}</span>
-                {r.aspects && Object.entries(r.aspects).map(([k, v]) => (
-                  <span key={k} style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: sub, textTransform: 'capitalize' }}>
-                    {k}: {v}
-                  </span>
-                ))}
-              </div>
-              <p style={{ fontSize: 12, color: sub, margin: '6px 0 0', lineHeight: 1.45 }}>{r.comment}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -548,84 +594,106 @@ function App() {
       }
     }
     
-    setSelections(prev => {
-      const next = { ...prev };
-      delete next[i];
-      return next;
-    });
-    setBookingNames(prev => {
-      const next = { ...prev };
-      delete next[i];
-      return next;
-    });
-    setBookingSteps(prev => {
-      const next = { ...prev };
-      delete next[i];
-      return next;
-    });
-    setBookedMessages(prev => ({ ...prev, [i]: true }));
-    
-    const summaryItems = results
-      .filter(res => !res.error)
-      .map(res => {
-        let details = "";
-        let itemTotalPrice = res.item.price;
-        if (res.item.type === 'flight') {
-          details = `${res.item.origin} to ${res.item.destination} departing on ${departureDate}`;
-        } else if (res.item.type === 'return flight') {
-          details = `${res.item.origin} to ${res.item.destination} returning on ${returnDate}`;
-        } else if (res.item.type === 'hotel') {
-          let checkOutStr = "";
-          if (checkInDate) {
-            const outDate = new Date(checkInDate);
-            outDate.setDate(outDate.getDate() + nights);
-            if (!isNaN(outDate.getTime())) {
-              checkOutStr = outDate.toISOString().split('T')[0];
-            }
-          }
-          itemTotalPrice = res.item.price * nights;
-          details = `in ${res.item.city}, Check-In: ${checkInDate}, Check-Out: ${checkOutStr} (${nights} nights at €${(res.item.price / 100).toFixed(2)}/night)`;
-        } else if (res.item.type === 'activity') {
-          details = `${res.item.description} (Suggested Date: during stay starting ${departureDate})`;
-        }
+    const failedResults = results.filter(res => res.error);
+    const successResults = results.filter(res => !res.error);
+
+    if (failedResults.length === 0) {
+      setSelections(prev => {
+        const next = { ...prev };
+        delete next[i];
+        return next;
+      });
+      setBookingNames(prev => {
+        const next = { ...prev };
+        delete next[i];
+        return next;
+      });
+      setBookingSteps(prev => {
+        const next = { ...prev };
+        delete next[i];
+        return next;
+      });
+      setBookedMessages(prev => ({ ...prev, [i]: true }));
+    } else {
+      const succeededIds = new Set(successResults.map(r => r.item.id));
+      setSelections(prev => {
+        const current = prev[i] || {};
         return {
-          id: res.item.id,
-          name: res.item.name,
-          type: res.item.type,
-          price: itemTotalPrice,
-          details: `Booking ID: ${res.booking.bookingId}. ${details}`
+          ...prev,
+          [i]: {
+            ...current,
+            flight: current.flight && succeededIds.has(current.flight.id) ? null : current.flight,
+            returnFlight: current.returnFlight && succeededIds.has(current.returnFlight.id) ? null : current.returnFlight,
+            hotel: current.hotel && succeededIds.has(current.hotel.id) ? null : current.hotel,
+            activities: (current.activities || []).filter(act => !succeededIds.has(act.id))
+          }
         };
       });
+    }
+    
+    const summaryItems = successResults.map(res => {
+      let details = "";
+      let itemTotalPrice = res.item.price;
+      if (res.item.type === 'flight') {
+        details = `${res.item.origin} to ${res.item.destination} departing on ${departureDate}`;
+      } else if (res.item.type === 'return flight') {
+        details = `${res.item.origin} to ${res.item.destination} returning on ${returnDate}`;
+      } else if (res.item.type === 'hotel') {
+        let checkOutStr = "";
+        if (checkInDate) {
+          const outDate = new Date(checkInDate);
+          outDate.setDate(outDate.getDate() + nights);
+          if (!isNaN(outDate.getTime())) {
+            checkOutStr = outDate.toISOString().split('T')[0];
+          }
+        }
+        itemTotalPrice = res.item.price * nights;
+        details = `in ${res.item.city}, Check-In: ${checkInDate}, Check-Out: ${checkOutStr} (${nights} nights total at €${(res.item.price / 100).toFixed(2)}/night)`;
+      } else if (res.item.type === 'activity') {
+        details = `${res.item.description} (Suggested Date: during stay starting ${departureDate})`;
+      }
+      return {
+        id: res.item.id,
+        name: res.item.name,
+        type: res.item.type,
+        price: itemTotalPrice,
+        details: `Booking ID: ${res.booking.bookingId}. ${details}`
+      };
+    });
       
     let summaryText = "";
-    try {
-      const summaryRes = await fetch(`${BACKEND_URL}/api/generatesummary`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          guestName,
-          items: summaryItems
-        })
-      });
-      if (!summaryRes.ok) throw new Error("Failed to generate summary");
-      const summaryData = await summaryRes.json();
-      summaryText = summaryData.summary;
-    } catch (err) {
-      summaryText = `### 🎉 Travel Booking Confirmation\n\n**Guest Name:** ${guestName}\n\n`;
-      summaryText += `Here is your detailed itinerary and booking summary:\n\n`;
-      let totalCost = 0;
-      for (const res of results) {
-        if (res.error) {
-          summaryText += `❌ **Failed to book ${res.item.name}:** ${res.error}\n\n`;
-        } else {
+    if (summaryItems.length > 0) {
+      try {
+        const summaryRes = await fetch(`${BACKEND_URL}/api/generatesummary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guestName,
+            items: summaryItems
+          })
+        });
+        if (!summaryRes.ok) throw new Error("Failed to generate summary");
+        const summaryData = await summaryRes.json();
+        summaryText = summaryData.summary;
+      } catch (err) {
+        summaryText = `### 🎉 Travel Booking Confirmation\n\n**Guest Name:** ${guestName}\n\n`;
+        summaryText += `Here is your detailed itinerary and booking summary:\n\n`;
+        let totalCost = 0;
+        for (const res of successResults) {
           const b = res.booking;
           const item = res.item;
           const itemPrice = item.type === 'hotel' ? item.price * nights : item.price;
           totalCost += itemPrice;
           summaryText += `- **${item.type.toUpperCase()}:** ${item.name} (${item.id}) - Booking ID: \`${b.bookingId}\` (Price: €${(itemPrice / 100).toFixed(2)})\n`;
         }
+        summaryText += `\nTotal Cost: €${(totalCost / 100).toFixed(2)}`;
       }
-      summaryText += `\nTotal Cost: €${(totalCost / 100).toFixed(2)}`;
+    }
+
+    if (failedResults.length > 0) {
+      const errorLines = failedResults.map(f => `- **${f.item.name}** (${f.item.id}): ${f.error}`).join('\n');
+      const warningBanner = `⚠️ **Warning: The following item(s) could not be booked due to an error:**\n${errorLines}\n\n*Please retry booking the unconfirmed item(s) in the step wizard above.*`;
+      summaryText = summaryText ? `${warningBanner}\n\n---\n\n${summaryText}` : warningBanner;
     }
     
     const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -1035,13 +1103,33 @@ function App() {
                                 <input
                                   type="date"
                                   value={currentDepartureDate}
+                                  max={currentReturnDate || undefined}
                                   onChange={e => setSelections(prev => {
                                     const nextDepDate = e.target.value;
                                     const current = prev[i] || {};
-                                    // Also sync check-in date
+                                    let nextRetDate = current.returnDate !== undefined ? current.returnDate : retDateDefault;
+                                    if (nextRetDate && nextRetDate < nextDepDate) {
+                                      nextRetDate = nextDepDate;
+                                    }
+                                    let calculatedNights = 1;
+                                    if (nextDepDate && nextRetDate) {
+                                      const t1 = new Date(nextDepDate).getTime();
+                                      const t2 = new Date(nextRetDate).getTime();
+                                      if (!isNaN(t1) && !isNaN(t2)) {
+                                        const diff = t2 - t1;
+                                        const calc = Math.round(diff / (1000 * 60 * 60 * 24));
+                                        calculatedNights = calc > 0 ? calc : 1;
+                                      }
+                                    }
                                     return {
                                       ...prev,
-                                      [i]: { ...current, departureDate: nextDepDate, checkInDate: nextDepDate }
+                                      [i]: {
+                                        ...current,
+                                        departureDate: nextDepDate,
+                                        checkInDate: nextDepDate,
+                                        returnDate: nextRetDate,
+                                        nights: calculatedNights
+                                      }
                                     };
                                   })}
                                   style={{
@@ -1125,7 +1213,7 @@ function App() {
                                 </div>
                               ) : (
                                 <div style={{ padding: 16, background: surf, borderRadius: 12, border: `1px dashed ${border}`, color: sub, fontSize: 13, textAlign: 'center' }}>
-                                  No departure flights found for this destination.
+                                  No departure flights found for this route. You may proceed to select hotel and activities, or try a different date.
                                 </div>
                               )}
 
@@ -1440,10 +1528,34 @@ function App() {
                                 <input
                                   type="date"
                                   value={currentReturnDate}
-                                  onChange={e => setSelections(prev => ({
-                                    ...prev,
-                                    [i]: { ...prev[i], returnDate: e.target.value }
-                                  }))}
+                                  min={currentDepartureDate || undefined}
+                                  onChange={e => setSelections(prev => {
+                                    const nextRetDate = e.target.value;
+                                    const current = prev[i] || {};
+                                    const currentDep = current.departureDate !== undefined ? current.departureDate : depDateDefault;
+                                    let validRetDate = nextRetDate;
+                                    if (currentDep && nextRetDate < currentDep) {
+                                      validRetDate = currentDep;
+                                    }
+                                    let calculatedNights = 1;
+                                    if (currentDep && validRetDate) {
+                                      const t1 = new Date(currentDep).getTime();
+                                      const t2 = new Date(validRetDate).getTime();
+                                      if (!isNaN(t1) && !isNaN(t2)) {
+                                        const diff = t2 - t1;
+                                        const calc = Math.round(diff / (1000 * 60 * 60 * 24));
+                                        calculatedNights = calc > 0 ? calc : 1;
+                                      }
+                                    }
+                                    return {
+                                      ...prev,
+                                      [i]: {
+                                        ...current,
+                                        returnDate: validRetDate,
+                                        nights: calculatedNights
+                                      }
+                                    };
+                                  })}
                                   style={{
                                     padding: '10px 14px', borderRadius: 10, border: `1px solid ${border}`,
                                     background: dark ? A.cardDark : '#fff', color: text, fontSize: 13, outline: 'none'

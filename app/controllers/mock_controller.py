@@ -1,14 +1,20 @@
 import os
 import json
 import random
+import threading
+import tempfile
+import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 mock_router = APIRouter()
 
-# Path to embedded db.json within the app package
+# Path to embedded db.json and separate bookings.json within the app package
 db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "database", "db.json")
+bookings_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "database", "bookings.json")
+
+db_lock = threading.Lock()
 
 def load_db():
     if not os.path.exists(db_path):
@@ -21,14 +27,38 @@ def load_db():
 
 def save_db(data):
     try:
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
-        with open(db_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        db_dir = os.path.dirname(db_path)
+        os.makedirs(db_dir, exist_ok=True)
+        with tempfile.NamedTemporaryFile("w", dir=db_dir, delete=False, encoding="utf-8") as tf:
+            json.dump(data, tf, indent=2, ensure_ascii=False)
+            temp_name = tf.name
+        os.replace(temp_name, db_path)
     except Exception as e:
         print(f"Failed to save db.json: {e}")
 
 # Load database cache on startup
 db = load_db()
+
+def load_bookings():
+    if os.path.exists(bookings_path):
+        try:
+            with open(bookings_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("active_bookings", [])
+        except Exception:
+            pass
+    return db.get("bookings", {}).get("active_bookings", [])
+
+def save_bookings(active_bookings):
+    try:
+        b_dir = os.path.dirname(bookings_path)
+        os.makedirs(b_dir, exist_ok=True)
+        with tempfile.NamedTemporaryFile("w", dir=b_dir, delete=False, encoding="utf-8") as tf:
+            json.dump({"active_bookings": active_bookings}, tf, indent=2, ensure_ascii=False)
+            temp_name = tf.name
+        os.replace(temp_name, bookings_path)
+    except Exception as e:
+        print(f"Failed to save bookings.json: {e}")
 
 # Helper function to filter array of dictionaries
 def filter_data(data_list, query_params):
@@ -50,8 +80,6 @@ def filter_data(data_list, query_params):
             if not val:
                 continue
             if k.lower() == "date":
-                # Continuous date schedule: Date parameters are accepted and passed through seamlessly across any requested date continuum,
-                # as daily flight schedules and hotel room availability are continuously simulated in this dataset.
                 continue
             
             target_keys = [k]
@@ -89,7 +117,8 @@ def filter_data(data_list, query_params):
             if price_key is not None:
                 try:
                     price_val = float(item[price_key])
-                    if min_p <= price_val <= max_p:
+                    price_in_euros = price_val / 100.0
+                    if min_p <= price_in_euros <= max_p:
                         new_filtered.append(item)
                 except ValueError:
                     pass
@@ -136,8 +165,20 @@ def query_activities(city: str = None, activity_id: str = None) -> list:
     return filter_data(activities_list, params)
 
 def query_active_bookings() -> list:
+    return load_bookings()
+
+def find_item_by_id(item_id: str):
     global db
-    return db.get("bookings", {}).get("active_bookings", [])
+    for f in db.get("flights", {}).get("available_flights", []):
+        if f.get("flightID") == item_id:
+            return f, "flights"
+    for h in db.get("hotels", {}).get("available_hotels", []):
+        if h.get("hotelID") == item_id:
+            return h, "hotels"
+    for a in db.get("thingsToDo", {}).get("available_activities", []):
+        if a.get("activityID") == item_id:
+            return a, "activities"
+    return None, None
 
 def perform_booking(name: str, item_id: str, item_type: str = "general", item_data: dict = None, date: str = None) -> dict:
     global db
@@ -146,7 +187,33 @@ def perform_booking(name: str, item_id: str, item_type: str = "general", item_da
     if not date:
         date = item_data.get("date") or datetime.now().strftime("%Y-%m-%d")
         
-    booking_id = f"BKG-{random.randint(100000, 999999)}"
+    found_item, detected_type = find_item_by_id(item_id)
+    if found_item:
+        if detected_type and item_type == "general":
+            item_type = detected_type
+        # Check and decrement available inventory
+        if "availableSeats" in found_item:
+            try:
+                seats = int(found_item["availableSeats"])
+                if seats <= 0:
+                    return {"error": f"Item {item_id} has no available seats."}
+                found_item["availableSeats"] = str(seats - 1)
+            except ValueError:
+                pass
+        elif "availableRooms" in found_item:
+            try:
+                rooms = int(found_item["availableRooms"])
+                if rooms <= 0:
+                    return {"error": f"Item {item_id} has no available rooms."}
+                found_item["availableRooms"] = str(rooms - 1)
+            except ValueError:
+                pass
+        if not item_data:
+            item_data = {k: v for k, v in found_item.items() if k != "reviews"}
+    elif item_id and not (item_id.startswith("FL") or item_id.startswith("HTL") or item_id.startswith("ACT") or item_id.startswith("BKG")):
+        return {"error": f"Item ID '{item_id}' not found in database."}
+
+    booking_id = f"BKG-{uuid.uuid4().hex[:8].upper()}"
     new_booking = {
         "bookingId": booking_id,
         "name": name,
@@ -157,13 +224,10 @@ def perform_booking(name: str, item_id: str, item_type: str = "general", item_da
         "bookedAt": datetime.now(timezone.utc).isoformat() + "Z"
     }
 
-    if "bookings" not in db:
-        db["bookings"] = {}
-    if "active_bookings" not in db["bookings"]:
-        db["bookings"]["active_bookings"] = []
-
-    db["bookings"]["active_bookings"].append(new_booking)
-    save_db(db)
+    with db_lock:
+        active_bookings = load_bookings()
+        active_bookings.append(new_booking)
+        save_bookings(active_bookings)
     return new_booking
 
 # HTTP route handlers for external API consumers
@@ -227,4 +291,6 @@ async def post_book(request: Request):
         return JSONResponse(status_code=400, content={"error": "Guest name and Item ID are required."})
 
     res = perform_booking(name, item_id, item_type, item_data, date)
+    if isinstance(res, dict) and "error" in res:
+        return JSONResponse(status_code=400, content=res)
     return JSONResponse(status_code=201, content=res)

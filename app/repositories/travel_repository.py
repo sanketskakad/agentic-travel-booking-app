@@ -58,20 +58,21 @@ def get_available_activities(city: str) -> list:
         return []
 
 def book_item(name: str, item_id: str) -> dict:
+    item_type = "general"
+    if item_id.startswith("HTL-"):
+        item_type = "hotels"
+    elif item_id.startswith("ACT-"):
+        item_type = "activities"
+    else:
+        item_type = "flights"
+
     if USE_LOCAL_MOCK:
         from app.controllers.mock_controller import perform_booking
-        logger.info(f"Booking local item {item_id} for guest {name}")
-        item_type = "general"
-        if item_id.startswith("HTL-"):
-            item_type = "hotels"
-        elif item_id.startswith("ACT-"):
-            item_type = "activities"
-        elif item_id.startswith("FLT-"):
-            item_type = "flights"
+        logger.info(f"Booking local item {item_id} ({item_type}) for guest {name}")
         return perform_booking(name=name, item_id=item_id, item_type=item_type)
 
     url = f"{MOCK_API_BASE_URL}/book"
-    payload = {"name": name, "itemId": item_id}
+    payload = {"name": name, "itemId": item_id, "itemType": item_type}
     try:
         logger.info(f"Booking item {item_id} for guest {name}")
         response = requests.post(url, json=payload, timeout=10)

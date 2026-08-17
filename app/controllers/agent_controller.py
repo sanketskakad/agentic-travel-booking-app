@@ -6,36 +6,22 @@ from app.services.agent_service import graph
 from app.repositories.travel_repository import book_item
 from app.config.settings import MOCK_API_BASE_URL, USE_LOCAL_MOCK
 
+import uuid
 router = APIRouter()
 
 @router.post("/travelplan")
 def get_travel_plan(request: QueryRequest) -> dict:
     user_query = request.query
-    thread_id = getattr(request, "thread_id", None) or "default_thread"
+    thread_id = getattr(request, "thread_id", None) or str(uuid.uuid4())
     config = {"configurable": {"thread_id": thread_id}}
-    result = graph.invoke({
-        "message": user_query,
-        "origin_city": "",
-        "destination_city": "",
-        "travel_date": "",
-        "return_date": "",
-        "budget": "",
-        "flight_state": [],
-        "return_flight_state": [],
-        "hotel_state": [],
-        "activity_state": [],
-        "is_valid": True,
-        "clarification_message": None
-    }, config=config)
+    result = graph.invoke({"message": user_query}, config=config)
     
     origin = result.get("origin_city") or "Origin"
     destination = result.get("destination_city") or "Destination"
     dep_date = result.get("travel_date") or "Not specified"
     ret_date = result.get("return_date") or "Not specified"
-    
-    clean_msg = f"### 🗺️ EuroTrip Planner: {origin} to {destination}\n\n" \
-                f"I found travel options for your trip from **{dep_date}** to **{ret_date}**.\n\n" \
-                f"Please follow the step-by-step guide below to configure your trip!"
+    is_valid = result.get("is_valid", True)
+    clarification_msg = result.get("clarification_message")
 
     flights = [
         {
@@ -75,6 +61,19 @@ def get_travel_plan(request: QueryRequest) -> dict:
         } for a in result.get("activity_state", [])
     ]
     
+    total_options = len(flights) + len(return_flights) + len(hotels) + len(activities)
+
+    if not is_valid and clarification_msg:
+        clean_msg = f"### ⚠️ Input Needed\n\n{clarification_msg}"
+    elif total_options == 0:
+        clean_msg = f"### ⚠️ No Travel Options Found for {origin} to {destination}\n\n" \
+                    f"We could not find any available flights, accommodations, or activities for **{origin} to {destination}**. " \
+                    f"Please verify the city names or try searching within our supported European destinations (e.g., Berlin, Frankfurt, Paris, Amsterdam)."
+    else:
+        clean_msg = f"### 🗺️ EuroTrip Planner: {origin} to {destination}\n\n" \
+                    f"I found travel options for your trip from **{dep_date}** to **{ret_date}**.\n\n" \
+                    f"Please follow the step-by-step guide below to configure your trip!"
+
     return {
         "query": user_query,
         "response": clean_msg,
@@ -83,16 +82,23 @@ def get_travel_plan(request: QueryRequest) -> dict:
         "flights": flights,
         "return_flights": return_flights,
         "hotels": hotels,
-        "activities": activities
+        "activities": activities,
+        "is_valid": is_valid,
+        "clarification_message": clarification_msg
     }
+
+from fastapi.responses import JSONResponse
 
 @router.get("/health")
 def health_check():
     return {"status": "healthy"}
 
 @router.post("/book")
-def book_travel_item(request: BookRequest) -> dict:
-    return book_item(request.name, request.itemId)
+def book_travel_item(request: BookRequest):
+    res = book_item(request.name, request.itemId)
+    if isinstance(res, dict) and "error" in res:
+        return JSONResponse(status_code=400, content=res)
+    return res
 
 @router.get("/reviews/{item_id}")
 def get_item_reviews(item_id: str):
@@ -152,7 +158,7 @@ def build_fallback_itinerary_summary(guest_name: str, items: list) -> str:
         total_price += item.price
 
     for category, category_items in grouped_items.items():
-        icon = "✈️" if "Flight" in category else "🏨" if "Hotel" in category else "🎟️"
+        icon = "✈️" if "flight" in category.lower() else "🏨" if "hotel" in category.lower() else "🎟️"
         summary_lines.append(f"### {icon} {category} Reservations")
         for it in category_items:
             details_str = f" - {it.details}" if it.details else ""
@@ -181,7 +187,7 @@ def generate_summary(request: GenerateSummaryRequest):
         
     items_desc = []
     for item in request.items:
-        desc = f"- {item.type.capitalize()}: {item.name} ({item.id}) - Price: €{item.price / 100:.2f}"
+        desc = f"- {item.type.capitalize()}: {item.name} ({item.id}) - Total Cost: €{item.price / 100:.2f}"
         if item.details:
             desc += f" ({item.details})"
         items_desc.append(desc)
@@ -198,7 +204,7 @@ def generate_summary(request: GenerateSummaryRequest):
     )
     
     try:
-        llm = ChatGroq(model_name="llama-3.1-8b-instant", temperature=0.7)
+        llm = ChatGroq(model_name="llama-3.1-8b-instant", temperature=0.7, request_timeout=10.0, max_retries=2)
         res = llm.invoke(prompt)
         return {"summary": res.content}
     except Exception as e:

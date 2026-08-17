@@ -1,38 +1,53 @@
-from typing import TypedDict, List, Optional
-from pydantic import BaseModel
+from typing import TypedDict, List, Optional, Any
+from pydantic import BaseModel, field_validator
 
 class HotelState(BaseModel):
-    hotelName: str
-    city: str
-    cityCode: str
-    country: str
-    pricePerNight: str
-    rating: str
-    availableRooms: str
-    hotelID: str
+    hotelName: str = ""
+    city: str = ""
+    cityCode: Optional[str] = ""
+    country: Optional[str] = ""
+    pricePerNight: str = ""
+    rating: str = ""
+    availableRooms: str = ""
+    hotelID: str = ""
+
+    @field_validator("pricePerNight", "rating", "availableRooms", mode="before")
+    @classmethod
+    def stringify_hotel_fields(cls, v: Any) -> str:
+        return str(v) if v is not None else ""
 
 class FlightState(BaseModel):
-    flightName: str
-    origin: str
-    originCode: str
-    destination: str
-    destinationCode: str
-    departureTime: str
-    arrivalTime: str
-    duration: str
-    price: str
-    availableSeats: str
-    flightID: str
+    flightName: str = ""
+    origin: str = ""
+    originCode: Optional[str] = ""
+    destination: str = ""
+    destinationCode: Optional[str] = ""
+    departureTime: Optional[str] = ""
+    arrivalTime: Optional[str] = ""
+    duration: Optional[str] = ""
+    price: str = ""
+    availableSeats: str = ""
+    flightID: str = ""
+
+    @field_validator("price", "availableSeats", mode="before")
+    @classmethod
+    def stringify_flight_fields(cls, v: Any) -> str:
+        return str(v) if v is not None else ""
 
 class ActivityState(BaseModel):
-    activityName: str
-    city: str
-    cityCode: str
-    country: str
-    description: str
-    price: str
-    duration: str
-    activityID: str
+    activityName: str = ""
+    city: str = ""
+    cityCode: Optional[str] = ""
+    country: Optional[str] = ""
+    description: Optional[str] = ""
+    price: str = ""
+    duration: Optional[str] = ""
+    activityID: str = ""
+
+    @field_validator("price", mode="before")
+    @classmethod
+    def stringify_activity_fields(cls, v: Any) -> str:
+        return str(v) if v is not None else ""
 
 class State(TypedDict):
     message: str
