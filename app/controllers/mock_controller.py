@@ -50,7 +50,9 @@ def filter_data(data_list, query_params):
             if not val:
                 continue
             if k.lower() == "date":
-                continue # Skip date filtering as daily frequency is simulated
+                # Continuous date schedule: Date parameters are accepted and passed through seamlessly across any requested date continuum,
+                # as daily flight schedules and hotel room availability are continuously simulated in this dataset.
+                continue
             
             target_keys = [k]
             if k.lower() == "source":

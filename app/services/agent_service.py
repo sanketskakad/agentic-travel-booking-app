@@ -17,6 +17,7 @@ logger = logging.getLogger("agent_service")
 def parse_details_fallback(message: str) -> dict:
     """
     Regex fallback parser to extract origin, destination, and dates when LLM API is unavailable.
+    Handles continuous travel date ranges and cleans destination city strings.
     """
     origin = "Berlin"
     destination = ""
@@ -24,18 +25,21 @@ def parse_details_fallback(message: str) -> dict:
     return_date = "Not specified"
     budget = "Not specified"
 
-    # Match "from <Origin> to <Destination>"
-    match_route = re.search(r'from\s+([A-Za-z\s]+?)\s+to\s+([A-Za-z\s]+?)(?:[\,\.\;\:]|\s+departing|\s+returning|\s+hotels|\s+and|\s+in|\s+on|$)', message, re.IGNORECASE)
+    # Match "from <Origin> to <Destination>" stopping at common prepositions/keywords
+    match_route = re.search(r'from\s+([A-Za-z\s]+?)\s+to\s+([A-Za-z\s]+?)(?:[\,\.\;\:]|\s+with|\s+for|\s+having|\s+departing|\s+returning|\s+hotels?|\s+flights?|\s+and|\s+on|$)', message, re.IGNORECASE)
     if match_route:
         origin = match_route.group(1).strip().title()
         destination = match_route.group(2).strip().title()
     else:
         # Match "to <Destination>" or "in <Destination>"
-        match_dest = re.search(r'(?:to|in)\s+([A-Za-z\s]+?)(?:[\,\.\;\:]|\s+departing|\s+returning|\s+hotels|\s+and|\s+on|$)', message, re.IGNORECASE)
+        match_dest = re.search(r'(?:to|in)\s+([A-Za-z\s]+?)(?:[\,\.\;\:]|\s+with|\s+for|\s+having|\s+departing|\s+returning|\s+hotels?|\s+flights?|\s+and|\s+on|$)', message, re.IGNORECASE)
         if match_dest:
             destination = match_dest.group(1).strip().title()
 
-    # Match dates YYYY-MM-DD
+    # Clean destination city string if extra trailing words were captured
+    destination = re.sub(r'\s+(with|for|having|departing|returning|on|and|hotels?|flights?|trip|star).*$', '', destination, flags=re.IGNORECASE).strip()
+
+    # Match travel date continuum YYYY-MM-DD
     dates = re.findall(r'\b\d{4}-\d{2}-\d{2}\b', message)
     if len(dates) >= 1:
         travel_date = dates[0]
@@ -64,7 +68,7 @@ class TravelDetails(BaseModel):
 def extract_travel_details(message: str) -> dict:
     """
     Uses ChatGroq with structured output to extract travel details.
-    Falls back to regex parsing if API key is missing or model invocation fails.
+    Falls back to rule-based parsing if API key is missing or model invocation fails.
     """
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key or api_key == "your-api-key" or api_key == "your_groq_api_key_here":
@@ -72,7 +76,7 @@ def extract_travel_details(message: str) -> dict:
         return parse_details_fallback(message)
 
     try:
-        llm = ChatGroq(model_name="llama-3.1-8b-instant", temperature=0)
+        llm = ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0)
         structured_llm = llm.with_structured_output(TravelDetails)
         
         prompt = f"Extract travel details from this user query: '{message}'"

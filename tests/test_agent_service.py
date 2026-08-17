@@ -86,3 +86,13 @@ def test_clarification_node():
 def test_graph_compilation_and_memory():
     assert graph is not None
     assert hasattr(graph, "invoke")
+
+def test_extract_travel_details_complex_query(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    query = "Plan a trip from Frankfurt to Paris with outbound flight on 2026-09-01, return flight on 2026-09-10, and a 4-star hotel."
+    details = extract_travel_details(query)
+    assert details["origin_city"] == "Frankfurt"
+    assert details["destination_city"] == "Paris"
+    assert details["travel_date"] == "2026-09-01"
+    assert details["return_date"] == "2026-09-10"
+
