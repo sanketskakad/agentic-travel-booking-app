@@ -569,6 +569,7 @@ function App() {
       .filter(res => !res.error)
       .map(res => {
         let details = "";
+        let itemTotalPrice = res.item.price;
         if (res.item.type === 'flight') {
           details = `${res.item.origin} to ${res.item.destination} departing on ${departureDate}`;
         } else if (res.item.type === 'return flight') {
@@ -582,7 +583,8 @@ function App() {
               checkOutStr = outDate.toISOString().split('T')[0];
             }
           }
-          details = `in ${res.item.city}, Check-In: ${checkInDate}, Check-Out: ${checkOutStr} (${nights} nights)`;
+          itemTotalPrice = res.item.price * nights;
+          details = `in ${res.item.city}, Check-In: ${checkInDate}, Check-Out: ${checkOutStr} (${nights} nights at €${(res.item.price / 100).toFixed(2)}/night)`;
         } else if (res.item.type === 'activity') {
           details = `${res.item.description} (Suggested Date: during stay starting ${departureDate})`;
         }
@@ -590,7 +592,7 @@ function App() {
           id: res.item.id,
           name: res.item.name,
           type: res.item.type,
-          price: res.item.price,
+          price: itemTotalPrice,
           details: `Booking ID: ${res.booking.bookingId}. ${details}`
         };
       });
@@ -618,8 +620,9 @@ function App() {
         } else {
           const b = res.booking;
           const item = res.item;
-          totalCost += item.price;
-          summaryText += `- **${item.type.toUpperCase()}:** ${item.name} (${item.id}) - Booking ID: \`${b.bookingId}\` (Price: €${(item.price / 100).toFixed(2)})\n`;
+          const itemPrice = item.type === 'hotel' ? item.price * nights : item.price;
+          totalCost += itemPrice;
+          summaryText += `- **${item.type.toUpperCase()}:** ${item.name} (${item.id}) - Booking ID: \`${b.bookingId}\` (Price: €${(itemPrice / 100).toFixed(2)})\n`;
         }
       }
       summaryText += `\nTotal Cost: €${(totalCost / 100).toFixed(2)}`;
