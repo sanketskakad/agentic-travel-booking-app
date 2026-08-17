@@ -99,7 +99,7 @@ def test_non_ascii_parsing_and_clarification_node():
 
 def test_groq_timeout_parameters():
     """Defect 6: Test ChatGroq is called with request_timeout and max_retries."""
-    with patch("langchain_groq.ChatGroq") as mock_groq:
+    with patch.dict("os.environ", {"GROQ_API_KEY": "fake_test_key"}), patch("langchain_groq.ChatGroq") as mock_groq:
         mock_instance = MagicMock()
         mock_instance.invoke.return_value = MagicMock(content="Summary")
         mock_groq.return_value = mock_instance
